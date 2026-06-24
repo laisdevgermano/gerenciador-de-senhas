@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  avatar     String?
+  role       String   @default("user")
+  status     String   @default("active")
+  passphrase String?
+  mfaEnabled Boolean  @default(false)
+  lastLogin  DateTime?
+  publicKey  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  passwords   Password[] @relation("PasswordCreator")
+  sharedWith  SharedAccess[]
+  groupMember GroupMember[]
+}
+
+model Password {
+  id        String   @id @default(cuid())
+  name      String
+  username  String
+  password  String
+  url       String?
+  notes     String?
+  favorite  Boolean  @default(false)
+  folderId  String?
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creator     User           @relation("PasswordCreator", fields: [createdBy], references: [id])
+  folder      Folder?        @relation(fields: [folderId], references: [id])
+  tags        PasswordTag[]
+  sharedWith  SharedAccess[]
+}
+
+model Folder {
+  id        String   @id @default(cuid())
+  name      String
+  parentId  String?
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent    Folder?  @relation("FolderParent", fields: [parentId], references: [id])
+  children  Folder[] @relation("FolderParent")
+  passwords Password[]
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String?  @default("#0c11cf")
+  createdAt DateTime @default(now())
+
+  passwords PasswordTag[]
+}
+
+model PasswordTag {
+  passwordId String
+  tagId      String
+
+  password Password @relation(fields: [passwordId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([passwordId, tagId])
+}
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members GroupMember[]
+}
+
+model GroupMember {
+  groupId String
+  userId  String
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId])
+}
+
+model SharedAccess {
+  id         String   @id @default(cuid())
+  passwordId String
+  userId     String
+  permission String   @default("read")
+  createdAt  DateTime @default(now())
+
+  password Password @relation(fields: [passwordId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PendingInvite {
+  id        String   @id @default(cuid())
+  email     String
+  role      String   @default("user")
+  invitedBy String
+  createdAt DateTime @default(now())
+}
