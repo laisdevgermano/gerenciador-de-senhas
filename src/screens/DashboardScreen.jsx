@@ -1,14 +1,12 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Globe,
   User,
   Clock,
-  Star,
   Copy,
   Eye,
   EyeOff,
   ExternalLink,
-  MoreHorizontal,
   Edit3,
   Trash2,
   Share2,
@@ -20,15 +18,16 @@ import { useStore } from '../context/StoreContext'
 import Sidebar from '../components/Sidebar'
 import Table from '../components/Table'
 import Badge from '../components/Badge'
-import Avatar from '../components/Avatar'
 import Tooltip from '../components/Tooltip'
-import Dropdown from '../components/Dropdown'
 import Button from '../components/Button'
 import EmptyState from '../components/EmptyState'
 import ThemeToggle from '../components/ThemeToggle'
 import PasswordFormModal from './PasswordFormModal'
 import ShareModal from './ShareModal'
 import SettingsScreen from './SettingsScreen'
+import EmployeeScreen from './EmployeeScreen'
+import FolderScreen from './FolderScreen'
+import TagScreen from './TagScreen'
 
 /* FUTURE: usar react-router-dom para navegação
  *   const navigate = useNavigate()
@@ -40,21 +39,33 @@ export default function DashboardScreen({ onLogout }) {
     tags,
     loading,
     currentUser,
+    employees,
     addPassword,
     updatePassword,
     deletePassword,
     getFolderById,
     getTagById,
+    getUserById,
+    loadData,
   } = useStore()
+
+  useEffect(() => { loadData() }, [loadData])
 
   const [selectedFilter, setSelectedFilter] = useState('all')
   const [selectedPassword, setSelectedPassword] = useState(null)
+  const [isEditing, setIsEditing] = useState(false)
   const [showPasswords, setShowPasswords] = useState({})
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showFormModal, setShowFormModal] = useState(false)
   const [editingPassword, setEditingPassword] = useState(null)
   const [showShareModal, setShowShareModal] = useState(false)
   const [sharingPassword, setSharingPassword] = useState(null)
+
+  useEffect(() => {
+    setSelectedPassword(null)
+    setIsEditing(false)
+    setEditingPassword(null)
+  }, [selectedFilter])
 
   /* FUTURE: carregamento real com skeleton loader
    *   useEffect(() => {
@@ -67,8 +78,6 @@ export default function DashboardScreen({ onLogout }) {
 
   const filteredPasswords = useMemo(() => {
     if (selectedFilter === 'all') return passwords
-    if (selectedFilter === 'favorites') return passwords.filter((p) => p.favorite)
-    if (selectedFilter === 'shared') return passwords.filter((p) => p.sharedWith.length > 0)
     if (selectedFilter.startsWith('folder:')) {
       const folderId = selectedFilter.split(':')[1]
       return passwords.filter((p) => p.folderId === folderId)
@@ -79,6 +88,30 @@ export default function DashboardScreen({ onLogout }) {
     }
     return passwords
   }, [passwords, selectedFilter])
+
+  const visibleFolders = useMemo(() => {
+    if (!currentUser || currentUser.role === 'admin') return folders
+    const folderIdsWithAccess = new Set(
+      passwords.map((p) => p.folderId).filter(Boolean)
+    )
+    const visible = new Set(folderIdsWithAccess)
+    for (const fid of folderIdsWithAccess) {
+      let pid = folders.find((f) => f.id === fid)?.parentId
+      while (pid) {
+        visible.add(pid)
+        pid = folders.find((f) => f.id === pid)?.parentId
+      }
+    }
+    return folders.filter((f) => visible.has(f.id))
+  }, [folders, passwords, currentUser])
+
+  const visibleTags = useMemo(() => {
+    if (!currentUser || currentUser.role === 'admin') return tags
+    const tagIdsWithAccess = new Set(
+      passwords.flatMap((p) => p.tags ?? [])
+    )
+    return tags.filter((t) => tagIdsWithAccess.has(t.id))
+  }, [tags, passwords, currentUser])
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-'
@@ -97,7 +130,7 @@ export default function DashboardScreen({ onLogout }) {
 
   const handleEditPassword = (pw) => {
     setEditingPassword(pw)
-    setShowFormModal(true)
+    setIsEditing(true)
   }
 
   const handleNewPassword = () => {
@@ -106,11 +139,10 @@ export default function DashboardScreen({ onLogout }) {
   }
 
   const handleDeletePassword = (pw) => {
-    /* FUTURE: modal de confirmação
-     *   const confirmed = await confirmDialog('Tem certeza?')
-     *   if (confirmed) await api.delete(`/passwords/${pw.id}`) */
-    deletePassword(pw.id)
-    if (selectedPassword?.id === pw.id) setSelectedPassword(null)
+    if (confirm(`Excluir a senha "${pw.name}" permanentemente?`)) {
+      deletePassword(pw.id)
+      if (selectedPassword?.id === pw.id) setSelectedPassword(null)
+    }
   }
 
   const handleShare = (pw) => {
@@ -131,9 +163,6 @@ export default function DashboardScreen({ onLogout }) {
           <div className="min-w-0">
             <p className="font-medium text-text-primary truncate max-w-[200px]">
               {row.name}
-              {row.favorite && (
-                <Star size={12} className="inline ml-1.5 text-amber-400 fill-amber-400" />
-              )}
             </p>
             {row.username && (
               <p className="text-xs text-text-muted truncate max-w-[200px]">{row.username}</p>
@@ -143,14 +172,24 @@ export default function DashboardScreen({ onLogout }) {
       ),
     },
     {
-      key: 'username',
-      label: 'Usuário',
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          <User size={14} className="text-text-muted shrink-0" />
-          <span className="text-sm text-text-secondary truncate max-w-[140px]">{row.username}</span>
-        </div>
-      ),
+      key: 'sharedWith',
+      label: 'Funcionário',
+      render: (row) => {
+        const names = (row.sharedWith || [])
+          .map((sa) => {
+            const id = sa.userId || sa
+            return sa.user?.name || getUserById(id)?.name || null
+          })
+          .filter(Boolean)
+        return (
+          <div className="flex items-center gap-1.5">
+            <User size={14} className="text-text-muted shrink-0" />
+            <span className="text-sm text-text-secondary truncate max-w-[160px]">
+              {names.length > 0 ? names.join(', ') : '—'}
+            </span>
+          </div>
+        )
+      },
     },
     {
       key: 'url',
@@ -181,14 +220,15 @@ export default function DashboardScreen({ onLogout }) {
     return (
       <div className="flex h-screen">
         <Sidebar
-          folders={folders}
-          tags={tags}
+          folders={visibleFolders}
+          tags={visibleTags}
           selectedFilter={selectedFilter}
           onSelectFilter={setSelectedFilter}
           onNewPassword={handleNewPassword}
           onLogout={onLogout}
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          currentUser={currentUser}
         />
         <main className="flex-1 overflow-y-auto">
           <SettingsScreen />
@@ -197,17 +237,81 @@ export default function DashboardScreen({ onLogout }) {
     )
   }
 
+  if (selectedFilter === 'employees') {
+    return (
+      <div className="flex h-screen">
+        <Sidebar
+          folders={visibleFolders}
+          tags={visibleTags}
+          selectedFilter={selectedFilter}
+          onSelectFilter={setSelectedFilter}
+          onNewPassword={handleNewPassword}
+          onLogout={onLogout}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          currentUser={currentUser}
+        />
+        <main className="flex-1 overflow-y-auto">
+          <EmployeeScreen />
+        </main>
+      </div>
+    )
+  }
+
+  if (selectedFilter === 'manage-folders') {
+    return (
+      <div className="flex h-screen">
+        <Sidebar
+          folders={visibleFolders}
+          tags={visibleTags}
+          selectedFilter={selectedFilter}
+          onSelectFilter={setSelectedFilter}
+          onNewPassword={handleNewPassword}
+          onLogout={onLogout}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          currentUser={currentUser}
+        />
+        <main className="flex-1 overflow-y-auto">
+          <FolderScreen />
+        </main>
+      </div>
+    )
+  }
+
+  if (selectedFilter === 'manage-tags') {
+    return (
+      <div className="flex h-screen">
+        <Sidebar
+          folders={visibleFolders}
+          tags={visibleTags}
+          selectedFilter={selectedFilter}
+          onSelectFilter={setSelectedFilter}
+          onNewPassword={handleNewPassword}
+          onLogout={onLogout}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          currentUser={currentUser}
+        />
+        <main className="flex-1 overflow-y-auto">
+          <TagScreen />
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen bg-surface-secondary">
       <Sidebar
-        folders={folders}
-        tags={tags}
+        folders={visibleFolders}
+        tags={visibleTags}
         selectedFilter={selectedFilter}
         onSelectFilter={setSelectedFilter}
         onNewPassword={handleNewPassword}
         onLogout={onLogout}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        currentUser={currentUser}
       />
 
       <main className="flex-1 flex flex-col overflow-hidden">
@@ -215,8 +319,6 @@ export default function DashboardScreen({ onLogout }) {
           <div>
             <h1 className="text-sm font-semibold text-text-primary">
               {selectedFilter === 'all' && 'Todas as senhas'}
-              {selectedFilter === 'favorites' && 'Favoritos'}
-              {selectedFilter === 'shared' && 'Compartilhadas comigo'}
               {selectedFilter.startsWith('folder:') &&
                 getFolderById(selectedFilter.split(':')[1])?.name}
               {selectedFilter.startsWith('tag:') &&
@@ -226,9 +328,11 @@ export default function DashboardScreen({ onLogout }) {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Button size="sm" onClick={handleNewPassword}>
-              Nova senha
-            </Button>
+            {selectedFilter === 'all' && (
+              <Button size="sm" onClick={handleNewPassword}>
+                Nova senha
+              </Button>
+            )}
           </div>
         </header>
 
@@ -241,11 +345,7 @@ export default function DashboardScreen({ onLogout }) {
             <EmptyState
               title="Nenhuma senha encontrada"
               description={
-                selectedFilter === 'favorites'
-                  ? 'Você ainda não favoritou nenhuma senha.'
-                  : selectedFilter === 'shared'
-                  ? 'Nenhuma senha foi compartilhada com você ainda.'
-                  : 'Sua lista está vazia. Crie sua primeira senha.'
+                'Sua lista está vazia. Crie sua primeira senha.'
               }
               action={
                 <Button size="sm" onClick={handleNewPassword}>
@@ -253,37 +353,47 @@ export default function DashboardScreen({ onLogout }) {
                 </Button>
               }
             />
+          ) : selectedPassword ? (
+            isEditing && editingPassword ? (
+              <PasswordFormModal
+                asModal={false}
+                folders={visibleFolders}
+                password={editingPassword}
+                onClose={() => {
+                  setIsEditing(false)
+                  setEditingPassword(null)
+                }}
+                onSave={async (data) => {
+                  await updatePassword(editingPassword.id, data)
+                  setIsEditing(false)
+                  setEditingPassword(null)
+                }}
+              />
+            ) : (
+              <PasswordDetailPanel
+                password={selectedPassword}
+                showPassword={showPasswords[selectedPassword.id]}
+                onToggleVisibility={() => togglePasswordVisibility(selectedPassword.id)}
+                onCopy={() => copyToClipboard(selectedPassword.password)}
+                onCopyUsername={() => copyToClipboard(selectedPassword.username)}
+                onEdit={() => handleEditPassword(selectedPassword)}
+                onDelete={() => handleDeletePassword(selectedPassword)}
+                onShare={() => handleShare(selectedPassword)}
+                onClose={() => setSelectedPassword(null)}
+                getFolderById={getFolderById}
+                getTagById={getTagById}
+                currentUser={currentUser}
+              />
+            )
           ) : (
-            <div className={`grid gap-4 ${selectedPassword ? 'grid-cols-1 xl:grid-cols-5' : 'grid-cols-1'}`}>
-              <div className={`${selectedPassword ? 'xl:col-span-3' : ''}`}>
-                <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
-                  <Table
-                    columns={columns}
-                    data={filteredPasswords}
-                    selectedId={selectedPassword?.id}
-                    onRowClick={(row) => setSelectedPassword(row)}
-                    emptyMessage="Nenhum recurso encontrado."
-                  />
-                </div>
-              </div>
-
-              {selectedPassword && (
-                <div className="xl:col-span-2">
-                  <PasswordDetailPanel
-                    password={selectedPassword}
-                    showPassword={showPasswords[selectedPassword.id]}
-                    onToggleVisibility={() => togglePasswordVisibility(selectedPassword.id)}
-                    onCopy={() => copyToClipboard(selectedPassword.password)}
-                    onCopyUsername={() => copyToClipboard(selectedPassword.username)}
-                    onEdit={() => handleEditPassword(selectedPassword)}
-                    onDelete={() => handleDeletePassword(selectedPassword)}
-                    onShare={() => handleShare(selectedPassword)}
-                    onClose={() => setSelectedPassword(null)}
-                    getFolderById={getFolderById}
-                    getTagById={getTagById}
-                  />
-                </div>
-              )}
+            <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+              <Table
+                columns={columns}
+                data={filteredPasswords}
+                selectedId={selectedPassword?.id}
+                onRowClick={(row) => setSelectedPassword(row)}
+                emptyMessage="Nenhum recurso encontrado."
+              />
             </div>
           )}
         </div>
@@ -291,6 +401,7 @@ export default function DashboardScreen({ onLogout }) {
 
       {showFormModal && (
         <PasswordFormModal
+          folders={visibleFolders}
           password={editingPassword}
           onClose={() => {
             setShowFormModal(false)
@@ -340,6 +451,7 @@ function PasswordDetailPanel({
   onClose,
   getFolderById,
   getTagById,
+  currentUser,
 }) {
   const formatDate = (dateStr) => {
     if (!dateStr) return '-'
@@ -352,15 +464,31 @@ function PasswordDetailPanel({
 
   const folder = password.folderId ? getFolderById(password.folderId) : null
   const tags = password.tags?.map((t) => getTagById(t)).filter(Boolean) || []
+  const isAdmin = currentUser?.role === 'admin'
+  const myAccess = !isAdmin ? password.sharedWith?.find((sa) => sa.userId === currentUser?.id) : null
+  const canWrite = isAdmin || myAccess?.permission === 'write'
 
   return (
-    <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+    <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden h-full flex flex-col">
       <div className="flex items-center justify-between p-4 border-b border-border">
         <h3 className="text-sm font-semibold text-text-primary">Detalhes</h3>
-        <button onClick={onClose} className="text-text-muted hover:text-text-primary text-sm cursor-pointer">Fechar</button>
+        <div className="flex items-center gap-2">
+          {canWrite && (
+            <Button variant="outline" size="sm" icon={Edit3} onClick={onEdit}
+              className="!bg-gray-900 !text-white !border-gray-600 hover:!bg-gray-700">
+              Editar
+            </Button>
+          )}
+          {isAdmin && (
+            <Button variant="primary" size="sm" icon={Share2} onClick={onShare}>
+              Compartilhar
+            </Button>
+          )}
+          <button onClick={onClose} className="text-text-muted hover:text-text-primary text-sm cursor-pointer ml-1">Fechar</button>
+        </div>
       </div>
 
-      <div className="p-4 space-y-5">
+      <div className="flex-1 overflow-y-auto p-4 space-y-5">
         <div>
           <p className="text-xs text-text-muted uppercase tracking-wider font-semibold mb-1">Nome</p>
           <p className="text-sm font-medium text-text-primary">{password.name}</p>
@@ -435,6 +563,14 @@ function PasswordDetailPanel({
           </div>
         )}
 
+        {canWrite && (
+          <div className="pt-4 border-t border-border">
+            <Button variant="danger" size="sm" icon={Trash2} onClick={onDelete}>
+              Excluir senha
+            </Button>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3 text-xs text-text-muted pt-2 border-t border-border">
           <div>
             <p className="font-semibold uppercase tracking-wider">Criado em</p>
@@ -445,23 +581,6 @@ function PasswordDetailPanel({
             <p>{formatDate(password.updatedAt)}</p>
           </div>
         </div>
-      </div>
-
-      <div className="flex items-center gap-2 p-4 border-t border-border">
-        <Button variant="secondary" size="sm" icon={Edit3} onClick={onEdit}>
-          Editar
-        </Button>
-        <Button variant="secondary" size="sm" icon={Share2} onClick={onShare}>
-          Compartilhar
-        </Button>
-        <Dropdown
-          align="right"
-          className="ml-auto"
-          trigger={<MoreHorizontal size={16} className="text-text-muted" />}
-          items={[
-            { label: 'Excluir', icon: Trash2, onClick: onDelete, danger: true },
-          ]}
-        />
       </div>
     </div>
   )

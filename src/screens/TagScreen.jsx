@@ -16,7 +16,11 @@ export default function TagScreen() {
     passwords.filter((p) => p.tags.includes(tagId)).length
 
   const handleDelete = async (tag) => {
-    if (confirm(`Excluir tag "${tag.name}"?`)) {
+    const count = getPasswordCount(tag.id)
+    const msg = count > 0
+      ? `Excluir tag "${tag.name}"? ${count} senha(s) usam esta tag.`
+      : `Excluir tag "${tag.name}"?`
+    if (confirm(msg)) {
       await deleteTag(tag.id)
     }
   }
@@ -133,7 +137,7 @@ function TagFormModal({ tag, onClose, onSave }) {
       size="sm"
       actions={
         <>
-          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button variant="danger" onClick={onClose}>Cancelar</Button>
           <Button onClick={handleSubmit}>{tag ? 'Salvar' : 'Criar'}</Button>
         </>
       }

@@ -3,28 +3,16 @@ import {
   User,
   Shield,
   Key,
-  Smartphone,
-  Download,
-  Upload,
-  RefreshCw,
   Check,
-  Copy,
   Eye,
   EyeOff,
-  ChevronRight,
-  Lock,
-  LogOut,
+  RefreshCw,
 } from 'lucide-react'
 import { useStore } from '../context/StoreContext'
 import Button from '../components/Button'
 import Input from '../components/Input'
-import Badge from '../components/Badge'
 import Avatar from '../components/Avatar'
-import TagScreen from './TagScreen'
-import FolderScreen from './FolderScreen'
-import GroupScreen from './GroupScreen'
-import AdminScreen from './AdminScreen'
-import ImportExportScreen from './ImportExportScreen'
+import AuditScreen from './AuditScreen'
 
 /* FUTURE: salvar configurações no backend
  *   const saveProfile = (data) => api.put('/users/me', data)
@@ -35,12 +23,7 @@ export default function SettingsScreen() {
 
   const tabs = [
     { key: 'profile', label: 'Meu Perfil', icon: User },
-    { key: 'security', label: 'Segurança', icon: Shield },
-    { key: 'folders', label: 'Pastas', icon: Lock },
-    { key: 'tags', label: 'Tags', icon: Key },
-    { key: 'groups', label: 'Grupos', icon: Lock },
-    { key: 'admin', label: 'Administração', icon: Shield },
-    { key: 'import-export', label: 'Importar / Exportar', icon: Download },
+    { key: 'audit', label: 'Auditoria', icon: Shield },
   ]
 
   return (
@@ -67,29 +50,60 @@ export default function SettingsScreen() {
 
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'profile' && <ProfileSettings user={currentUser} />}
-        {activeTab === 'security' && <SecuritySettings />}
-        {activeTab === 'folders' && <FolderScreen />}
-        {activeTab === 'tags' && <TagScreen />}
-        {activeTab === 'groups' && <GroupScreen />}
-        {activeTab === 'admin' && currentUser?.role === 'admin' && <AdminScreen />}
-        {activeTab === 'admin' && currentUser?.role !== 'admin' && (
+        {activeTab === 'audit' && currentUser?.role === 'admin' && <AuditScreen />}
+        {activeTab === 'audit' && currentUser?.role !== 'admin' && (
           <div className="p-6 text-text-muted text-sm">Acesso restrito a administradores.</div>
         )}
-        {activeTab === 'import-export' && <ImportExportScreen />}
       </div>
     </div>
   )
 }
 
 function ProfileSettings({ user }) {
+  const { updateUser } = useStore()
   const [name, setName] = useState(user?.name || '')
   const [email] = useState(user?.email || '')
   const [saved, setSaved] = useState(false)
 
+  const [newPassphrase, setNewPassphrase] = useState('')
+  const [confirmPassphrase, setConfirmPassphrase] = useState('')
+  const [showNew, setShowNew] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [passSaved, setPassSaved] = useState(false)
+  const [passError, setPassError] = useState('')
+  const [savingPass, setSavingPass] = useState(false)
+
   const handleSave = () => {
-    /* FUTURE: api.put('/users/me', { name }) */
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleChangePassphrase = async () => {
+    setPassError('')
+    if (!newPassphrase.trim()) {
+      setPassError('Informe a nova frase secreta.')
+      return
+    }
+    if (newPassphrase.length < 6) {
+      setPassError('A frase secreta deve ter pelo menos 6 caracteres.')
+      return
+    }
+    if (newPassphrase !== confirmPassphrase) {
+      setPassError('As frases não coincidem.')
+      return
+    }
+    setSavingPass(true)
+    try {
+      await updateUser(user.id, { passphrase: newPassphrase })
+      setPassSaved(true)
+      setNewPassphrase('')
+      setConfirmPassphrase('')
+      setTimeout(() => setPassSaved(false), 2000)
+    } catch {
+      setPassError('Erro ao alterar a frase secreta.')
+    } finally {
+      setSavingPass(false)
+    }
   }
 
   return (
@@ -121,87 +135,58 @@ function ProfileSettings({ user }) {
           </Button>
         </div>
       </div>
-    </div>
-  )
-}
 
-function SecuritySettings() {
-  const [showKey, setShowKey] = useState(false)
-  const [copied, setCopied] = useState(false)
+      <div className="bg-surface rounded-xl border border-border p-6 shadow-sm space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Key size={16} className="text-brand" />
+          <h4 className="text-sm font-semibold text-text-primary">Alterar frase secreta</h4>
+        </div>
+        <p className="text-xs text-text-muted -mt-2">
+          Apenas você pode alterar sua própria frase secreta.
+        </p>
 
-  const mockPublicKey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
-xsFNBGcAAAAAABAAxFKx4L5f2g3H...
------END PGP PUBLIC KEY BLOCK-----`
-
-  const handleCopyKey = () => {
-    navigator.clipboard?.writeText(mockPublicKey)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  return (
-    <div className="p-6 max-w-2xl space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-text-primary">Segurança</h3>
-        <p className="text-sm text-text-muted">Gerencie sua chave e autenticação</p>
-      </div>
-
-      <div className="bg-surface rounded-xl border border-border p-6 shadow-sm space-y-6">
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-sm font-medium text-text-primary">Chave pública</p>
-              <p className="text-xs text-text-muted">Compartilhe esta chave para receber senhas</p>
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={copied ? Check : Copy}
-              onClick={handleCopyKey}
-            >
-              {copied ? 'Copiado' : 'Copiar'}
-            </Button>
-          </div>
-          <div className="bg-surface-tertiary rounded-lg p-3 font-mono text-xs text-text-secondary break-all max-h-24 overflow-y-auto border border-border">
-            {showKey ? mockPublicKey : mockPublicKey.slice(0, 60) + '...'}
-          </div>
+        <div className="relative">
+          <Input
+            label="Nova frase secreta"
+            type={showNew ? 'text' : 'password'}
+            placeholder="Mínimo de 6 caracteres"
+            value={newPassphrase}
+            onChange={(e) => setNewPassphrase(e.target.value)}
+          />
           <button
-            onClick={() => setShowKey(!showKey)}
-            className="text-xs text-brand hover:underline mt-1 cursor-pointer"
+            type="button"
+            onClick={() => setShowNew(!showNew)}
+            className="absolute right-3 top-[38px] text-text-muted hover:text-text-primary cursor-pointer"
           >
-            {showKey ? 'Ocultar' : 'Mostrar'} chave completa
+            {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
 
-        <div className="h-px bg-border" />
-
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-sm font-medium text-text-primary">Autenticação de dois fatores (MFA)</p>
-              <p className="text-xs text-text-muted">Adicione uma camada extra de segurança</p>
-            </div>
-            <Badge variant={false ? 'success' : 'warning'}>
-              {false ? 'Ativo' : 'Inativo'}
-            </Badge>
-          </div>
-          <Button variant="outline" size="sm" icon={Smartphone}>
-            Configurar MFA
-          </Button>
-          {/* FUTURE: fluxo de configuração de MFA
-           *   1. api.post('/auth/mfa/setup') -> retorna QR code
-           *   2. api.post('/auth/mfa/verify', { code }) -> habilita MFA */}
+        <div className="relative">
+          <Input
+            label="Confirmar nova frase secreta"
+            type={showConfirm ? 'text' : 'password'}
+            placeholder="Repita a nova frase secreta"
+            value={confirmPassphrase}
+            onChange={(e) => setConfirmPassphrase(e.target.value)}
+            error={passError}
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirm(!showConfirm)}
+            className="absolute right-3 top-[38px] text-text-muted hover:text-text-primary cursor-pointer"
+          >
+            {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
         </div>
 
-        <div className="h-px bg-border" />
-
-        <div>
-          <p className="text-sm font-medium text-text-primary mb-1">Frase secreta</p>
-          <p className="text-xs text-text-muted mb-3">
-            Você pode alterar sua frase secreta a qualquer momento.
-          </p>
-          <Button variant="secondary" size="sm" icon={RefreshCw}>
-            Alterar frase secreta
+        <div className="flex items-center gap-3 pt-1">
+          <Button
+            onClick={handleChangePassphrase}
+            icon={passSaved ? Check : RefreshCw}
+            loading={savingPass}
+          >
+            {passSaved ? 'Alterada' : 'Alterar frase secreta'}
           </Button>
         </div>
       </div>

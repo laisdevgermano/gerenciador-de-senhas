@@ -13,6 +13,9 @@ dist-ssr
 *.local
 .next
 .env
+check-pass.mjs
+check-users.mjs
+reset-pass.mjs
 
 # Editor directories and files
 .vscode/*

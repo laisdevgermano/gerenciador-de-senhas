@@ -8,22 +8,24 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  name       String
-  email      String   @unique
-  avatar     String?
-  role       String   @default("user")
-  status     String   @default("active")
-  passphrase String?
-  mfaEnabled Boolean  @default(false)
-  lastLogin  DateTime?
-  publicKey  String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  avatar       String?
+  role         String   @default("user")
+  status       String   @default("active")
+  passphrase   String?
+  cargo        String?
+  departamento String?
+  telefone     String?
+  mfaEnabled   Boolean  @default(false)
+  lastLogin    DateTime?
+  publicKey    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  passwords   Password[] @relation("PasswordCreator")
-  sharedWith  SharedAccess[]
-  groupMember GroupMember[]
+  passwords  Password[]     @relation("PasswordCreator")
+  sharedWith SharedAccess[]
 }
 
 model Password {
@@ -77,26 +79,6 @@ model PasswordTag {
   @@id([passwordId, tagId])
 }
 
-model Group {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  members GroupMember[]
-}
-
-model GroupMember {
-  groupId String
-  userId  String
-
-  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([groupId, userId])
-}
-
 model SharedAccess {
   id         String   @id @default(cuid())
   passwordId String
@@ -106,12 +88,4 @@ model SharedAccess {
 
   password Password @relation(fields: [passwordId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model PendingInvite {
-  id        String   @id @default(cuid())
-  email     String
-  role      String   @default("user")
-  invitedBy String
-  createdAt DateTime @default(now())
 }

@@ -15,7 +15,7 @@ import EmptyState from '../components/EmptyState'
 import { useStore } from '../context/StoreContext'
 
 export default function FolderScreen() {
-  const { folders, getChildrenFolders, addFolder, updateFolder, deleteFolder } = useStore()
+  const { folders, getChildrenFolders, addFolder, updateFolder, deleteFolder, getPasswordsByFolder } = useStore()
   const [showModal, setShowModal] = useState(false)
   const [editingFolder, setEditingFolder] = useState(null)
   const [expanded, setExpanded] = useState({})
@@ -27,7 +27,11 @@ export default function FolderScreen() {
   const rootFolders = folders.filter((f) => !f.parentId)
 
   const handleDelete = async (folder) => {
-    if (confirm(`Excluir "${folder.name}"?`)) {
+    const count = getPasswordsByFolder(folder.id).length
+    const msg = count > 0
+      ? `Excluir "${folder.name}"? Ela contém ${count} senha(s).`
+      : `Excluir "${folder.name}"?`
+    if (confirm(msg)) {
       await deleteFolder(folder.id)
     }
   }
@@ -193,7 +197,7 @@ function FolderFormModal({ folder, folders, onClose, onSave }) {
       size="sm"
       actions={
         <>
-          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button variant="danger" onClick={onClose}>Cancelar</Button>
           <Button onClick={handleSubmit}>{folder ? 'Salvar' : 'Criar'}</Button>
         </>
       }

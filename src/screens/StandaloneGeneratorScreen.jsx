@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import Button from '../components/Button'
 import Badge from '../components/Badge'
+import ThemeToggle from '../components/ThemeToggle'
 
 export default function StandaloneGeneratorScreen() {
   const [length, setLength] = useState(24)

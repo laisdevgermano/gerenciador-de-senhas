@@ -1,15 +1,21 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
-export async function GET() {
+export async function GET(request) {
   try {
-    /* FUTURE: autenticação real — extrair userId do token JWT
-     *   const userId = request.headers.get('x-user-id') */
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get('userId')
     
+    const where = userId
+      ? { sharedWith: { some: { userId } } }
+      : {}
+
     const passwords = await prisma.password.findMany({
+      where,
       include: {
         tags: { include: { tag: true } },
         sharedWith: { include: { user: true } },
+        creator: { select: { id: true, name: true, email: true } },
       },
       orderBy: { updatedAt: 'desc' },
     })
@@ -33,12 +39,13 @@ export async function POST(request) {
           ? { create: tags.map((tagId) => ({ tagId })) }
           : undefined,
         sharedWith: sharedWith?.length
-          ? { create: sharedWith.map((userId) => ({ userId, permission: 'read' })) }
+          ? { create: sharedWith.map((sa) => ({ userId: sa.userId || sa, permission: sa.permission || 'read' })) }
           : undefined,
       },
       include: {
         tags: { include: { tag: true } },
         sharedWith: { include: { user: true } },
+        creator: { select: { id: true, name: true, email: true } },
       },
     })
 

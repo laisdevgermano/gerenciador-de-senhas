@@ -15,12 +15,13 @@ export async function PUT(request, { params }) {
           ? { deleteMany: {}, create: tags.map((tagId) => ({ tagId })) }
           : undefined,
         sharedWith: sharedWith
-          ? { deleteMany: {}, create: sharedWith.map((userId) => ({ userId, permission: 'read' })) }
+          ? { deleteMany: {}, create: sharedWith.map((sa) => ({ userId: sa.userId || sa, permission: sa.permission || 'read' })) }
           : undefined,
       },
       include: {
         tags: { include: { tag: true } },
         sharedWith: { include: { user: true } },
+        creator: { select: { id: true, name: true, email: true } },
       },
     })
 

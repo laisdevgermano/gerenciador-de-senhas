@@ -1,11 +1,22 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo } from 'react'
 
 const StoreContext = createContext(null)
+
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), 15000)
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal })
+    return res
+  } finally {
+    clearTimeout(id)
+  }
+}
 
 const api = {
   async get(path) {
     const token = localStorage.getItem('token')
-    const res = await fetch(`/api${path}`, {
+    const res = await fetchWithTimeout(`/api${path}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
     if (!res.ok) throw new Error(`Erro ao buscar ${path}`)
@@ -13,7 +24,7 @@ const api = {
   },
   async post(path, body) {
     const token = localStorage.getItem('token')
-    const res = await fetch(`/api${path}`, {
+    const res = await fetchWithTimeout(`/api${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -26,7 +37,7 @@ const api = {
   },
   async put(path, body) {
     const token = localStorage.getItem('token')
-    const res = await fetch(`/api${path}`, {
+    const res = await fetchWithTimeout(`/api${path}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -39,7 +50,7 @@ const api = {
   },
   async delete(path) {
     const token = localStorage.getItem('token')
-    const res = await fetch(`/api${path}`, {
+    const res = await fetchWithTimeout(`/api${path}`, {
       method: 'DELETE',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
@@ -52,14 +63,12 @@ function normalizePassword(pw) {
   return {
     ...pw,
     tags: pw.tags?.map((pt) => (pt.tag ? pt.tag.id : pt)) ?? [],
-    sharedWith: pw.sharedWith?.map((sa) => (sa.user ? sa.user.id : sa)) ?? [],
-  }
-}
-
-function normalizeGroup(g) {
-  return {
-    ...g,
-    memberIds: g.members?.map((m) => m.user?.id ?? m.userId) ?? [],
+    sharedWith: pw.sharedWith?.map((sa) => ({
+      userId: sa.user?.id ?? sa.userId,
+      user: sa.user ?? null,
+      permission: sa.permission || 'read',
+    })) ?? [],
+    creator: pw.creator ?? null,
   }
 }
 
@@ -68,35 +77,36 @@ export function StoreProvider({ children, currentUser }) {
   const [folders, setFolders] = useState([])
   const [tags, setTags] = useState([])
   const [users, setUsers] = useState([])
-  const [groups, setGroups] = useState([])
-  const [pendingInvites, setPendingInvites] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const [pwData, folderData, tagData, userData, groupData, inviteData] = await Promise.all([
-          api.get('/passwords'),
-          api.get('/folders'),
-          api.get('/tags'),
-          api.get('/users'),
-          api.get('/groups'),
-          api.get('/invites'),
-        ])
-        setPasswords(pwData.map(normalizePassword))
-        setFolders(folderData)
-        setTags(tagData)
-        setUsers(userData)
-        setGroups(groupData.map(normalizeGroup))
-        setPendingInvites(inviteData)
-      } catch (err) {
-        console.error('Erro ao carregar dados:', err)
-      } finally {
-        setLoading(false)
-      }
+  const employees = useMemo(
+    () => users.filter((u) => u.role !== 'admin'),
+    [users]
+  )
+
+  const isEmployee = currentUser?.role !== 'admin'
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const userId = isEmployee ? currentUser.id : null
+      const pwPath = userId ? `/passwords?userId=${userId}` : '/passwords'
+      const [pwData, folderData, tagData, userData] = await Promise.all([
+        api.get(pwPath),
+        api.get('/folders'),
+        api.get('/tags'),
+        api.get('/users'),
+      ])
+      setPasswords(pwData.map(normalizePassword))
+      setFolders(folderData)
+      setTags(tagData)
+      setUsers(userData)
+    } catch (err) {
+      console.error('Erro ao carregar dados:', err)
+    } finally {
+      setLoading(false)
     }
-    fetchData()
-  }, [])
+  }, [isEmployee, currentUser?.id])
 
   const addPassword = useCallback(async (pwData) => {
     const pw = await api.post('/passwords', pwData)
@@ -151,38 +161,31 @@ export function StoreProvider({ children, currentUser }) {
     setTags((prev) => prev.filter((t) => t.id !== id))
   }, [])
 
-  const addGroup = useCallback(async (data) => {
-    const group = await api.post('/groups', data)
-    setGroups((prev) => [...prev, normalizeGroup(group)])
-    return group
+  const addEmployee = useCallback(async (data) => {
+    const user = await api.post('/users', data)
+    setUsers((prev) => [...prev, user])
+    return user
   }, [])
 
-  const updateGroup = useCallback(async (id, data) => {
-    const group = await api.put(`/groups/${id}`, data)
-    setGroups((prev) => prev.map((g) => (g.id === id ? normalizeGroup(group) : g)))
-    return group
+  const updateEmployee = useCallback(async (id, data) => {
+    const user = await api.put(`/users/${id}`, data)
+    setUsers((prev) => prev.map((u) => (u.id === id ? user : u)))
+    return user
   }, [])
 
-  const deleteGroup = useCallback(async (id) => {
-    await api.delete(`/groups/${id}`)
-    setGroups((prev) => prev.filter((g) => g.id !== id))
+  const deleteEmployee = useCallback(async (id) => {
+    await api.delete(`/users/${id}`)
+    setUsers((prev) => prev.filter((u) => u.id !== id))
+  }, [])
+
+  const setEmployeeAccess = useCallback(async (userId, passwordIds) => {
+    await api.put(`/users/${userId}/access`, { passwordIds })
   }, [])
 
   const updateUser = useCallback(async (id, data) => {
     const user = await api.put(`/users/${id}`, data)
     setUsers((prev) => prev.map((u) => (u.id === id ? user : u)))
     return user
-  }, [])
-
-  const addInvite = useCallback(async (data) => {
-    const invite = await api.post('/invites', data)
-    setPendingInvites((prev) => [...prev, invite])
-    return invite
-  }, [])
-
-  const deleteInvite = useCallback(async (id) => {
-    await api.delete(`/invites/${id}`)
-    setPendingInvites((prev) => prev.filter((i) => i.id !== id))
   }, [])
 
   const getPasswordById = useCallback(
@@ -220,15 +223,24 @@ export function StoreProvider({ children, currentUser }) {
     [tags]
   )
 
+  const getEmployeeAccess = useCallback(
+    (employeeId) => {
+      return passwords.filter((p) =>
+        p.sharedWith?.some((sa) => sa.userId === employeeId)
+      )
+    },
+    [passwords]
+  )
+
   const value = {
     passwords,
     folders,
     tags,
     users,
-    groups,
+    employees,
     currentUser,
-    pendingInvites,
     loading,
+    loadData,
     addPassword,
     updatePassword,
     deletePassword,
@@ -238,12 +250,12 @@ export function StoreProvider({ children, currentUser }) {
     addTag,
     updateTag,
     deleteTag,
-    addGroup,
-    updateGroup,
-    deleteGroup,
+    addEmployee,
+    updateEmployee,
+    deleteEmployee,
+    setEmployeeAccess,
+    getEmployeeAccess,
     updateUser,
-    addInvite,
-    deleteInvite,
     getPasswordById,
     getPasswordsByFolder,
     getPasswordsByTag,

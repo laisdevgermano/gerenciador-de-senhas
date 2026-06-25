@@ -32,11 +32,15 @@ export default function LoginScreen({ onLogin }) {
     setLoading(true)
 
     try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 15000)
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, passphrase }),
+        signal: controller.signal,
       })
+      clearTimeout(timeout)
 
       const data = await res.json()
 
@@ -46,6 +50,7 @@ export default function LoginScreen({ onLogin }) {
       }
 
       localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
       onLogin(data.user)
     } catch {
       setError('Erro ao conectar ao servidor.')
@@ -85,16 +90,7 @@ export default function LoginScreen({ onLogin }) {
                 Continuar
               </Button>
 
-              <p className="text-xs text-text-muted text-center mt-4">
-                Primeira vez?{' '}
-                <button
-                  type="button"
-                  onClick={() => onLogin?.({ isOnboarding: true })}
-                  className="text-brand font-medium hover:underline cursor-pointer"
-                >
-                  Configure seu dispositivo
-                </button>
-              </p>
+
             </form>
           ) : (
             <form onSubmit={handlePassphraseSubmit} className="space-y-4">

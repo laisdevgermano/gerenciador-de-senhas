@@ -65,7 +65,7 @@ export default function Modal({
         <div className="p-6">{children}</div>
 
         {actions && (
-          <div className="flex items-center justify-end gap-3 px-6 pb-6 pt-0 border-t border-border mt-2 pt-4">
+          <div className="flex items-center justify-end gap-3 px-6 pb-6 border-t border-border mt-2 pt-4">
             {actions}
           </div>
         )}
