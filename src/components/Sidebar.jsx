@@ -97,19 +97,19 @@ export default function Sidebar({
       }`}
     >
       <div className="flex items-center justify-between px-4 h-14 border-b border-border shrink-0">
-        {!collapsed && (
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-brand flex items-center justify-center">
+          {!collapsed && (
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-brand flex items-center justify-center">
+                <Lock size={14} className="text-white" />
+              </div>
+              <span className="font-bold text-text-primary text-sm">G-Pass</span>
+            </div>
+          )}
+          {collapsed && (
+            <div className="w-7 h-7 rounded-lg bg-brand flex items-center justify-center mx-auto">
               <Lock size={14} className="text-white" />
             </div>
-            <span className="font-bold text-text-primary text-sm">G-Pass</span>
-          </div>
-        )}
-        {collapsed && (
-          <div className="w-7 h-7 rounded-lg bg-brand flex items-center justify-center mx-auto">
-            <Lock size={14} className="text-white" />
-          </div>
-        )}
+          )}
       </div>
 
       <nav className="flex-1 overflow-y-auto p-2 space-y-1">

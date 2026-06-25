@@ -33,7 +33,7 @@ export default function LoginScreen({ onLogin }) {
 
     try {
       const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 15000)
+      const timeout = setTimeout(() => controller.abort(), 30000)
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,12 +51,13 @@ export default function LoginScreen({ onLogin }) {
 
       localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.user))
-      onLogin(data.user)
-    } catch {
-      setError('Erro ao conectar ao servidor.')
-    } finally {
       setLoading(false)
+      onLogin(data.user)
+      return
+    } catch (err) {
+      setError('Erro ao conectar ao servidor.')
     }
+    setLoading(false)
   }
 
   return (

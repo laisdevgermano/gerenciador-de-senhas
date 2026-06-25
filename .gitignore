@@ -27,3 +27,5 @@ reset-pass.mjs
 *.njsproj
 *.sln
 *.sw?
+
+.vercel

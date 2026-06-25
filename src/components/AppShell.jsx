@@ -37,9 +37,7 @@ export default function AppShell() {
       setAppState('onboarding')
       return
     }
-    if (isBrowser) {
-      localStorage.setItem('user', JSON.stringify(userData))
-    }
+    localStorage.setItem('user', JSON.stringify(userData))
     setUser(userData)
     setAppState('dashboard')
   }

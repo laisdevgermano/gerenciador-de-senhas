@@ -56,7 +56,7 @@ export default function DashboardScreen({ onLogout }) {
   const [isEditing, setIsEditing] = useState(false)
   const [showPasswords, setShowPasswords] = useState({})
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [showFormModal, setShowFormModal] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
   const [editingPassword, setEditingPassword] = useState(null)
   const [showShareModal, setShowShareModal] = useState(false)
   const [sharingPassword, setSharingPassword] = useState(null)
