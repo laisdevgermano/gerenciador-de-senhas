@@ -177,21 +177,31 @@ export default function PasswordFormModal({ password, onClose, onSave, folders: 
           Tags
         </label>
         <div className="flex flex-wrap gap-2">
-          {tags.map((tag) => (
-            <button
-              key={tag.id}
-              type="button"
-              onClick={() => toggleTag(tag.id)}
-              className={`cursor-pointer transition-all ${
-                form.tags.includes(tag.id) ? 'scale-105' : 'opacity-60'
-              }`}
-            >
-              <Badge color={tag.color}>
-                {form.tags.includes(tag.id) ? '✓ ' : ''}
+          {tags.map((tag) => {
+            const selected = form.tags.includes(tag.id)
+            return (
+              <button
+                key={tag.id}
+                type="button"
+                onClick={() => toggleTag(tag.id)}
+                className={`tag-pill ${selected ? 'selected' : ''}`}
+                style={{
+                  color: tag.color,
+                  borderColor: tag.color,
+                  backgroundColor: selected ? `${tag.color}18` : 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = `0 0 6px ${tag.color}, 0 0 14px ${tag.color}, 0 0 30px ${tag.color}`
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
+                {selected ? '✓ ' : ''}
                 {tag.name}
-              </Badge>
-            </button>
-          ))}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -302,15 +312,12 @@ export default function PasswordFormModal({ password, onClose, onSave, folders: 
         <h3 className="text-sm font-semibold text-text-primary">
           {isEditing ? 'Editar senha' : 'Nova senha'}
         </h3>
-        <Button variant="danger" size="sm" onClick={onClose}>
-          Cancelar
-        </Button>
       </div>
       <div className="flex-1 overflow-y-auto p-4">
         {formContent}
       </div>
       <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
-        <Button variant="ghost" size="sm" onClick={onClose}>
+        <Button variant="danger" size="sm" onClick={onClose}>
           Cancelar
         </Button>
         <Button size="sm" onClick={handleSubmit}>
