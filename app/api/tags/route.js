@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { verifyAuth, unauthorized } from '@/lib/auth'
 
-export async function GET() {
+export async function GET(request) {
+  const auth = verifyAuth(request)
+  if (!auth) return unauthorized()
   try {
     const tags = await prisma.tag.findMany({
       orderBy: { name: 'asc' },
@@ -13,6 +16,9 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  const auth = verifyAuth(request)
+  if (!auth) return unauthorized()
+
   try {
     const data = await request.json()
     const tag = await prisma.tag.create({ data })

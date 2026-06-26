@@ -137,96 +137,132 @@ export default function Sidebar({
 
         {folders.length > 0 && (
           <>
-            {currentUser?.role === 'admin' ? (
-              <div className="flex items-center gap-0 mt-4">
-                <button
-                  onClick={() => setFoldersExpanded((prev) => !prev)}
-                  className="p-1 text-text-muted hover:text-text-primary cursor-pointer shrink-0"
-                >
-                  {foldersExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                </button>
+            {collapsed ? (
+              currentUser?.role === 'admin' && (
                 <button
                   onClick={() => onSelectFilter?.('manage-folders')}
-                  className={`flex items-center gap-3 h-9 px-3 rounded-lg text-sm transition-colors cursor-pointer w-full ${
+                  className={`w-full flex items-center justify-center h-9 rounded-lg transition-colors cursor-pointer ${
                     selectedFilter === 'manage-folders'
-                      ? 'bg-surface-active font-medium'
+                      ? 'bg-surface-active'
                       : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
                   }`}
+                  title="Pastas"
                 >
-                  <FolderClosed size={18} className={`shrink-0 ${selectedFilter === 'manage-folders' ? 'text-brand' : ''}`} />
-                  {!collapsed && <span className="truncate font-semibold text-xs uppercase tracking-wider text-text-muted">Pastas</span>}
+                  <FolderClosed size={18} className="shrink-0" />
                 </button>
-              </div>
+              )
             ) : (
-              <div className="flex items-center gap-0 mt-4">
-                <button
-                  onClick={() => setFoldersExpanded((prev) => !prev)}
-                  className="p-1 text-text-muted hover:text-text-primary cursor-pointer shrink-0"
-                >
-                  {foldersExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                </button>
-                <p className="px-3 text-xs font-semibold text-text-muted uppercase tracking-wider">
-                  {collapsed ? '' : 'Pastas'}
-                </p>
-              </div>
+              <>
+                {currentUser?.role === 'admin' ? (
+                  <div className="flex items-center gap-0 mt-4">
+                    <button
+                      onClick={() => setFoldersExpanded((prev) => !prev)}
+                      className="p-1 text-text-muted hover:text-text-primary cursor-pointer shrink-0"
+                    >
+                      {foldersExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    </button>
+                    <button
+                      onClick={() => onSelectFilter?.('manage-folders')}
+                      className={`flex items-center gap-3 h-9 px-3 rounded-lg text-sm transition-colors cursor-pointer w-full ${
+                        selectedFilter === 'manage-folders'
+                          ? 'bg-surface-active font-medium'
+                          : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
+                      }`}
+                    >
+                      <FolderClosed size={18} className={`shrink-0 ${selectedFilter === 'manage-folders' ? 'text-brand' : ''}`} />
+                      {!collapsed && <span className="truncate font-semibold text-xs uppercase tracking-wider text-text-muted">Pastas</span>}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-0 mt-4">
+                    <button
+                      onClick={() => setFoldersExpanded((prev) => !prev)}
+                      className="p-1 text-text-muted hover:text-text-primary cursor-pointer shrink-0"
+                    >
+                      {foldersExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    </button>
+                    <p className="px-3 text-xs font-semibold text-text-muted uppercase tracking-wider">
+                      Pastas
+                    </p>
+                  </div>
+                )}
+                {foldersExpanded && rootFolders.map((folder) => renderFolder(folder))}
+              </>
             )}
-            {foldersExpanded && rootFolders.map((folder) => renderFolder(folder))}
           </>
         )}
 
         {tags.length > 0 && (
           <>
-            {currentUser?.role === 'admin' ? (
-              <div className="flex items-center gap-0 mt-4">
-                <button
-                  onClick={() => setTagsExpanded((prev) => !prev)}
-                  className="p-1 text-text-muted hover:text-text-primary cursor-pointer shrink-0"
-                >
-                  {tagsExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                </button>
+            {collapsed ? (
+              currentUser?.role === 'admin' && (
                 <button
                   onClick={() => onSelectFilter?.('manage-tags')}
-                  className={`flex items-center gap-3 h-9 px-3 rounded-lg text-sm transition-colors cursor-pointer w-full ${
+                  className={`w-full flex items-center justify-center h-9 rounded-lg transition-colors cursor-pointer ${
                     selectedFilter === 'manage-tags'
-                      ? 'bg-surface-active font-medium'
+                      ? 'bg-surface-active'
                       : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
                   }`}
+                  title="Tags"
                 >
-                  <Tags size={18} className={`shrink-0 ${selectedFilter === 'manage-tags' ? 'text-brand' : ''}`} />
-                  {!collapsed && <span className="truncate font-semibold text-xs uppercase tracking-wider text-text-muted">Tags</span>}
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-0 mt-4">
-                <button
-                  onClick={() => setTagsExpanded((prev) => !prev)}
-                  className="p-1 text-text-muted hover:text-text-primary cursor-pointer shrink-0"
-                >
-                  {tagsExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                </button>
-                <p className="px-3 text-xs font-semibold text-text-muted uppercase tracking-wider">
-                  {collapsed ? '' : 'Tags'}
-                </p>
-              </div>
-            )}
-            {tagsExpanded && tags.map((tag) => {
-              const isActive = selectedFilter === `tag:${tag.id}`
-              return (
-                <button
-                  key={tag.id}
-                  onClick={() => onSelectFilter?.(`tag:${tag.id}`)}
-                  className={`w-full flex items-center gap-3 h-9 px-3 rounded-lg text-sm transition-colors cursor-pointer ${
-                    isActive
-                      ? 'bg-surface-active font-medium'
-                      : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
-                  }`}
-                  title={collapsed ? tag.name : undefined}
-                >
-                  <Tags size={18} className="shrink-0" style={{ color: tag.color || undefined }} />
-                  {!collapsed && <span className="truncate">{tag.name}</span>}
+                  <Tags size={18} className="shrink-0" />
                 </button>
               )
-            })}
+            ) : (
+              <>
+                {currentUser?.role === 'admin' ? (
+                  <div className="flex items-center gap-0 mt-4">
+                    <button
+                      onClick={() => setTagsExpanded((prev) => !prev)}
+                      className="p-1 text-text-muted hover:text-text-primary cursor-pointer shrink-0"
+                    >
+                      {tagsExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    </button>
+                    <button
+                      onClick={() => onSelectFilter?.('manage-tags')}
+                      className={`flex items-center gap-3 h-9 px-3 rounded-lg text-sm transition-colors cursor-pointer w-full ${
+                        selectedFilter === 'manage-tags'
+                          ? 'bg-surface-active font-medium'
+                          : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
+                      }`}
+                    >
+                      <Tags size={18} className={`shrink-0 ${selectedFilter === 'manage-tags' ? 'text-brand' : ''}`} />
+                      {!collapsed && <span className="truncate font-semibold text-xs uppercase tracking-wider text-text-muted">Tags</span>}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-0 mt-4">
+                    <button
+                      onClick={() => setTagsExpanded((prev) => !prev)}
+                      className="p-1 text-text-muted hover:text-text-primary cursor-pointer shrink-0"
+                    >
+                      {tagsExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    </button>
+                    <p className="px-3 text-xs font-semibold text-text-muted uppercase tracking-wider">
+                      Tags
+                    </p>
+                  </div>
+                )}
+                {tagsExpanded && tags.map((tag) => {
+                  const isActive = selectedFilter === `tag:${tag.id}`
+                  return (
+                    <button
+                      key={tag.id}
+                      onClick={() => onSelectFilter?.(`tag:${tag.id}`)}
+                      className={`w-full flex items-center gap-3 h-9 px-3 rounded-lg text-sm transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-surface-active font-medium'
+                          : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
+                      }`}
+                      title={collapsed ? tag.name : undefined}
+                    >
+                      <Tags size={18} className="shrink-0" style={{ color: tag.color || undefined }} />
+                      {!collapsed && <span className="truncate">{tag.name}</span>}
+                    </button>
+                  )
+                })}
+              </>
+            )}
           </>
         )}
       </nav>

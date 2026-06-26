@@ -9,7 +9,11 @@ export default function AuditScreen() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/audit')
+        const token = localStorage.getItem('token')
+        const res = await fetch('/api/audit', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (!res.ok) { setEvents([]); return }
         const data = await res.json()
         setEvents(data)
       } catch {

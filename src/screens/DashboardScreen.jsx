@@ -64,6 +64,7 @@ export default function DashboardScreen({ onLogout }) {
   useEffect(() => {
     setSelectedPassword(null)
     setIsEditing(false)
+    setIsCreating(false)
     setEditingPassword(null)
   }, [selectedFilter])
 
@@ -134,8 +135,9 @@ export default function DashboardScreen({ onLogout }) {
   }
 
   const handleNewPassword = () => {
+    setSelectedPassword(null)
     setEditingPassword(null)
-    setShowFormModal(true)
+    setIsCreating(true)
   }
 
   const handleDeletePassword = (pw) => {
@@ -318,17 +320,17 @@ export default function DashboardScreen({ onLogout }) {
         <header className="h-14 border-b border-border bg-surface flex items-center justify-between px-6 shrink-0">
           <div>
             <h1 className="text-sm font-semibold text-text-primary">
-              {selectedFilter === 'all' && 'Todas as senhas'}
-              {selectedFilter.startsWith('folder:') &&
+              {isCreating ? 'Nova senha' : selectedFilter === 'all' ? 'Todas as senhas' : ''}
+              {!isCreating && selectedFilter.startsWith('folder:') &&
                 getFolderById(selectedFilter.split(':')[1])?.name}
-              {selectedFilter.startsWith('tag:') &&
+              {!isCreating && selectedFilter.startsWith('tag:') &&
                 getTagById(selectedFilter.split(':')[1])?.name}
             </h1>
-            <p className="text-xs text-text-muted">{filteredPasswords.length} recursos</p>
+            <p className="text-xs text-text-muted">{isCreating ? 'Preencha os dados da nova senha' : `${filteredPasswords.length} recursos`}</p>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            {selectedFilter === 'all' && (
+            {selectedFilter === 'all' && !isCreating && (
               <Button size="sm" onClick={handleNewPassword}>
                 Nova senha
               </Button>
@@ -341,6 +343,17 @@ export default function DashboardScreen({ onLogout }) {
             <div className="flex items-center justify-center py-16">
               <div className="w-8 h-8 border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
             </div>
+          ) : isCreating ? (
+            <PasswordFormModal
+              asModal={false}
+              folders={visibleFolders}
+              password={null}
+              onClose={() => setIsCreating(false)}
+              onSave={async (data) => {
+                await addPassword({ ...data, createdBy: currentUser?.id })
+                setIsCreating(false)
+              }}
+            />
           ) : filteredPasswords.length === 0 ? (
             <EmptyState
               title="Nenhuma senha encontrada"
@@ -398,26 +411,6 @@ export default function DashboardScreen({ onLogout }) {
           )}
         </div>
       </main>
-
-      {showFormModal && (
-        <PasswordFormModal
-          folders={visibleFolders}
-          password={editingPassword}
-          onClose={() => {
-            setShowFormModal(false)
-            setEditingPassword(null)
-          }}
-          onSave={async (data) => {
-            if (editingPassword) {
-              await updatePassword(editingPassword.id, data)
-            } else {
-              await addPassword({ ...data, createdBy: currentUser?.id })
-            }
-            setShowFormModal(false)
-            setEditingPassword(null)
-          }}
-        />
-      )}
 
       {showShareModal && sharingPassword && (
         <ShareModal

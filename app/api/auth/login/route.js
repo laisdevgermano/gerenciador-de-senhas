@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { neon } from '@neondatabase/serverless'
-
-export const maxDuration = 60
-
-const sql = neon(process.env.DATABASE_URL)
+import prisma from '@/lib/prisma'
 
 export async function POST(request) {
   try {
@@ -15,8 +11,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Email e frase secreta são obrigatórios' }, { status: 400 })
     }
 
-    const users = await sql`SELECT * FROM "User" WHERE email = ${email} LIMIT 1`
-    const user = users[0]
+    const user = await prisma.user.findUnique({ where: { email } })
 
     if (!user || !user.passphrase) {
       return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 })
@@ -27,7 +22,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 })
     }
 
-    await sql`UPDATE "User" SET "lastLogin" = NOW() WHERE id = ${user.id}`
+    await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } })
 
     const token = jwt.sign(
       { userId: user.id, role: user.role },

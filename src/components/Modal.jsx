@@ -11,17 +11,18 @@ export default function Modal({
   children,
   size = 'md',
   actions,
+  disableOverlayClose = false,
 }) {
   const overlayRef = useRef(null)
 
   useEffect(() => {
-    if (!open) return
+    if (!open || disableOverlayClose) return
     const handler = (e) => {
       if (e.key === 'Escape') onClose?.()
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [open, onClose])
+  }, [open, onClose, disableOverlayClose])
 
   if (!open) return null
 
@@ -36,7 +37,7 @@ export default function Modal({
     <div
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      onClick={(e) => e.target === overlayRef.current && onClose?.()}
+      onClick={(e) => !disableOverlayClose && e.target === overlayRef.current && onClose?.()}
     >
       <div
         className={`w-full ${sizes[size]} bg-surface rounded-xl shadow-xl border border-border overflow-hidden`}

@@ -191,6 +191,7 @@ function EmployeeFormModal({ employee, passwords, onClose, onSave, onDelete, sav
       onClose={onClose}
       title={employee ? 'Editar funcionário' : 'Novo funcionário'}
       size="md"
+      disableOverlayClose
       actions={
         <>
           <Button variant="danger" onClick={onClose}>Cancelar</Button>

@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { verifyAuth, unauthorized } from '@/lib/auth'
 
 export async function GET(request) {
+  const auth = verifyAuth(request)
+  if (!auth) return unauthorized()
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
@@ -27,6 +30,9 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
+  const auth = verifyAuth(request)
+  if (!auth) return unauthorized()
+
   try {
     const data = await request.json()
 

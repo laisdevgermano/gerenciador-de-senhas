@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
+import { verifyAuth, unauthorized } from '@/lib/auth'
 
 export async function PUT(request, { params }) {
+  const auth = verifyAuth(request)
+  if (!auth || auth.role !== 'admin') return unauthorized()
   try {
     const { id } = await params
     const data = await request.json()
@@ -17,6 +20,9 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
+  const auth = verifyAuth(request)
+  if (!auth || auth.role !== 'admin') return unauthorized()
+
   try {
     const { id } = await params
     await prisma.sharedAccess.deleteMany({ where: { userId: id } })

@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
+import { verifyAuth, unauthorized } from '@/lib/auth'
 
-export async function GET() {
+export async function GET(request) {
+  const auth = verifyAuth(request)
+  if (!auth || auth.role !== 'admin') return unauthorized()
   try {
     const users = await prisma.user.findMany({ orderBy: { name: 'asc' } })
     return NextResponse.json(users)
@@ -12,6 +15,9 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  const auth = verifyAuth(request)
+  if (!auth || auth.role !== 'admin') return unauthorized()
+
   try {
     const { name, email, passphrase, cargo, departamento, telefone } = await request.json()
     const hash = await bcrypt.hash(passphrase, 10)

@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { verifyAuth, unauthorized } from '@/lib/auth'
 
-export async function GET() {
+export async function GET(request) {
+  const auth = verifyAuth(request)
+  if (!auth || auth.role !== 'admin') return unauthorized()
   try {
     const [passwords, users] = await Promise.all([
       prisma.password.findMany({
