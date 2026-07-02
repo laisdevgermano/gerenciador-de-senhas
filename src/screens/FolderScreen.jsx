@@ -23,7 +23,16 @@ import EmptyState from '../components/EmptyState'
 import { useStore } from '../context/StoreContext'
 
 export default function FolderScreen() {
-  const { folders, getChildrenFolders, addFolder, updateFolder, deleteFolder, getPasswordsByFolder, reorderFolders } = useStore()
+  const { folders, getChildrenFolders, addFolder, updateFolder, deleteFolder, getPasswordsByFolder, reorderFolders, currentUser } = useStore()
+
+  // Apenas admin pode gerenciar pastas
+  if (currentUser?.role !== 'admin') {
+    return (
+      <div className="p-6">
+        <p className="text-sm text-text-muted">Acesso restrito a administradores.</p>
+      </div>
+    )
+  }
   const [showModal, setShowModal] = useState(false)
   const [editingFolder, setEditingFolder] = useState(null)
   const [expanded, setExpanded] = useState({})

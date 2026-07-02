@@ -9,10 +9,10 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { verifyAuth, unauthorized } from '@/lib/auth'
 
-// Atualiza os dados de uma tag (name, color)
+// Atualiza os dados de uma tag (name, color) — apenas admin
 export async function PUT(request, { params }) {
   const auth = verifyAuth(request)
-  if (!auth) return unauthorized()
+  if (!auth || auth.role !== 'admin') return unauthorized()
   try {
     const { id } = await params
     const data = await request.json()
@@ -23,10 +23,10 @@ export async function PUT(request, { params }) {
   }
 }
 
-// Exclui uma tag (cascade remove associações em PasswordTag)
+// Exclui uma tag (cascade remove associações em PasswordTag) — apenas admin
 export async function DELETE(request, { params }) {
   const auth = verifyAuth(request)
-  if (!auth) return unauthorized()
+  if (!auth || auth.role !== 'admin') return unauthorized()
   try {
     const { id } = await params
     await prisma.tag.delete({ where: { id } })

@@ -45,6 +45,8 @@ export async function GET(request) {
 }
 
 // Cria uma nova senha com tags e compartilhamentos opcionais
+// Admin pode criar para qualquer um; funcionário só pode criar
+// com createdBy = próprio ID (não pode se passar por outro)
 export async function POST(request) {
   const auth = verifyAuth(request)
   if (!auth) return unauthorized()
@@ -52,15 +54,17 @@ export async function POST(request) {
     const data = await request.json()
     const { tags, sharedWith, ...passwordData } = data
 
-    // Cria a senha e já relaciona tags e compartilhamentos
+    // Funcionário só pode criar senhas onde createdBy é ele mesmo
+    if (auth.role !== 'admin' && passwordData.createdBy !== auth.userId) {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
+    }
+
     const password = await prisma.password.create({
       data: {
         ...passwordData,
-        // Cria registros na tabela pivô PasswordTag
         tags: tags?.length
           ? { create: tags.map((tagId) => ({ tagId })) }
           : undefined,
-        // Cria registros na tabela SharedAccess
         sharedWith: sharedWith?.length
           ? { create: sharedWith.map((sa) => ({ userId: sa.userId || sa, permission: sa.permission || 'read' })) }
           : undefined,

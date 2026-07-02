@@ -15,7 +15,16 @@ import EmptyState from '../components/EmptyState'
 import { useStore } from '../context/StoreContext'
 
 export default function TagScreen() {
-  const { tags, passwords, addTag, updateTag, deleteTag } = useStore()
+  const { tags, passwords, addTag, updateTag, deleteTag, currentUser } = useStore()
+
+  // Apenas admin pode gerenciar tags
+  if (currentUser?.role !== 'admin') {
+    return (
+      <div className="p-6">
+        <p className="text-sm text-text-muted">Acesso restrito a administradores.</p>
+      </div>
+    )
+  }
   const [showModal, setShowModal] = useState(false)
   const [editingTag, setEditingTag] = useState(null)
 

@@ -115,15 +115,18 @@ export function StoreProvider({ children, currentUser }) {
 
   // --- loadData: carrega todos os dados iniciais ---
   // Funcionários só veem senhas compartilhadas com eles (filtro via ?userId=)
+  // O mesmo filtro é aplicado a tags e pastas para não vazar dados
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
       const userId = isEmployee ? currentUser.id : null
       const pwPath = userId ? `/passwords?userId=${userId}` : '/passwords'
+      const folderPath = userId ? `/folders?userId=${userId}` : '/folders'
+      const tagPath = userId ? `/tags?userId=${userId}` : '/tags'
       const [pwData, folderData, tagData, userData] = await Promise.all([
         api.get(pwPath),
-        api.get('/folders'),
-        api.get('/tags'),
+        api.get(folderPath),
+        api.get(tagPath),
         api.get('/users'),
       ])
       setPasswords(pwData.map(normalizePassword))
