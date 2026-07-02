@@ -1,7 +1,15 @@
+// ============================================================
+// /api/folders/[id] — CRUD de pasta individual
+// ============================================================
+// PUT   /api/folders/:id  → atualiza nome/cor/parentId
+// DELETE /api/folders/:id → exclui a pasta
+// ============================================================
+
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { verifyAuth, unauthorized } from '@/lib/auth'
 
+// Atualiza os dados de uma pasta específica
 export async function PUT(request, { params }) {
   const auth = verifyAuth(request)
   if (!auth) return unauthorized()
@@ -15,10 +23,10 @@ export async function PUT(request, { params }) {
   }
 }
 
+// Exclui uma pasta pelo ID
 export async function DELETE(request, { params }) {
   const auth = verifyAuth(request)
   if (!auth) return unauthorized()
-
   try {
     const { id } = await params
     await prisma.folder.delete({ where: { id } })
