@@ -114,8 +114,9 @@ export function StoreProvider({ children, currentUser }) {
   const isEmployee = currentUser?.role !== 'admin'
 
   // --- loadData: carrega todos os dados iniciais ---
-  // Funcionários só veem senhas compartilhadas com eles (filtro via ?userId=)
-  // O mesmo filtro é aplicado a tags e pastas para não vazar dados
+  // Admin carrega tudo. Funcionário só carrega senhas compartilhadas
+  // com ele (via ?userId=), tags e pastas filtradas, e NÃO carrega a
+  // lista de usuários (rota exclusiva para admin).
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
@@ -123,16 +124,17 @@ export function StoreProvider({ children, currentUser }) {
       const pwPath = userId ? `/passwords?userId=${userId}` : '/passwords'
       const folderPath = userId ? `/folders?userId=${userId}` : '/folders'
       const tagPath = userId ? `/tags?userId=${userId}` : '/tags'
-      const [pwData, folderData, tagData, userData] = await Promise.all([
-        api.get(pwPath),
-        api.get(folderPath),
-        api.get(tagPath),
-        api.get('/users'),
-      ])
+
+      // Admin carrega dados de usuários; funcionário não tem acesso
+      const promises = [api.get(pwPath), api.get(folderPath), api.get(tagPath)]
+      if (!isEmployee) promises.push(api.get('/users'))
+
+      const [pwData, folderData, tagData, userData] = await Promise.all(promises)
+
       setPasswords(pwData.map(normalizePassword))
       setFolders(folderData)
       setTags(tagData)
-      setUsers(userData)
+      setUsers(userData ?? [])
     } catch (err) {
       console.error('Erro ao carregar dados:', err)
     } finally {
