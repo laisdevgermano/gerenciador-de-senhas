@@ -1,3 +1,10 @@
+// ============================================================
+// LoadingState — spinner de carregamento
+// ============================================================
+// Tela inteira de loading com mensagem customizável. Usado
+// enquanto dados estão sendo buscados da API.
+// ============================================================
+
 export default function LoadingState({ message = 'Carregando...' }) {
   return (
     <div className="flex flex-col items-center justify-center py-16">

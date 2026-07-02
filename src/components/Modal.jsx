@@ -1,7 +1,19 @@
+// ============================================================
+// Modal — janela modal com overlay, título e ações
+// ============================================================
+// Props:
+//   open                → controla visibilidade
+//   onClose             → callback ao fechar (X, Escape, overlay)
+//   title / subtitle    → cabeçalho
+//   size                → sm | md (padrão) | lg | xl
+//   actions             → barra de botões no rodapé
+//   disableOverlayClose → impede fechar clicando fora
+// ============================================================
+
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 
-/* FUTURE: substituir por <dialog> nativo ou Radix Dialog
+/* FUTURE: substituir por <dialog> nativo ou Radux Dialog
  * para melhor acessibilidade (focus trap, aria-modal, etc.) */
 export default function Modal({
   open,

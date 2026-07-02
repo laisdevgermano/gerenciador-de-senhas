@@ -1,3 +1,10 @@
+// ============================================================
+// ThemeToggle — botão alternar tema claro/escuro
+// ============================================================
+// Lê o tema atual de ThemeContext e alterna ao clicar.
+// Ícone: Lua (modo claro) → Sol (modo escuro).
+// ============================================================
+
 import { Sun, Moon } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 

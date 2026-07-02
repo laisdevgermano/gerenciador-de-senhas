@@ -1,3 +1,16 @@
+// ============================================================
+// Avatar — círculo com iniciais do usuário
+// ============================================================
+// Exibe as iniciais (máx 2) com fundo colorido gerado a
+// partir do hash do nome. Usado no sidebar, tabelas e modais
+// para representar visualmente cada usuário.
+//
+// Props:
+//   name  → ex: "João Silva" → iniciais "JS"
+//   email → fallback se name não existir
+//   size  → sm | md | lg | xl
+// ============================================================
+
 /* FUTURE: em produção, carregar imagem real do usuário
  *   <img src={user.avatar} alt={user.name} className="..." /> */
 export default function Avatar({ name, email, size = 'md', className = '' }) {

@@ -1,4 +1,21 @@
-import { useState } from 'react'
+// ============================================================
+// Sidebar — navegação principal com drag-and-drop
+// ============================================================
+// Exibe:
+//   - Itens fixos: "Todas as senhas", "Funcionários" (admin)
+//   - Pastas (árvore expansível com drag-and-drop)
+//   - Tags (reordenáveis via drag-and-drop)
+//   - Funcionários (reordenáveis via drag-and-drop, admin)
+//   - Configurações, Sair, avatar do usuário, toggle recolher
+//
+// Props de reordenação:
+//   onReorderFolders(orderedIds) / onReorderTags / onReorderEmployees
+//
+// Drag isolado por seção (não arrasta pasta pra seção de tags).
+// GripVertical só aparece no hover (opacity-0 group-hover:opacity-100).
+// ============================================================
+
+import { useState, useRef } from 'react'
 import {
   Lock,
   FolderClosed,
@@ -8,15 +25,16 @@ import {
   LogOut,
   ChevronDown,
   ChevronRight,
+  User,
+  GripVertical,
 } from 'lucide-react'
 import Badge from './Badge'
 import Avatar from './Avatar'
 
-/* FUTURE: integrar com react-router-dom para navegação real.
- *   <NavLink to="/dashboard"> ... </NavLink> */
 export default function Sidebar({
   folders = [],
   tags = [],
+  employees = [],
   selectedFilter,
   onSelectFilter,
   onNewPassword,
@@ -24,13 +42,106 @@ export default function Sidebar({
   collapsed = false,
   onToggle,
   currentUser,
+  onReorderFolders,
+  onReorderTags,
+  onReorderEmployees,
 }) {
+  const [dragIndex, setDragIndex] = useState(null)
+  const [dragOverIndex, setDragOverIndex] = useState(null)
+  const [dragSection, setDragSection] = useState(null)
+  const dragNode = useRef(null)
+
+  const dragItemRef = useRef(null)
+
+  const handleDragStart = (e, section, index) => {
+    dragNode.current = index
+    setDragIndex(index)
+    setDragSection(section)
+    dragItemRef.current = e.currentTarget.closest('.group')
+    e.currentTarget.closest('.group')?.classList.add('opacity-50')
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', '')
+  }
+
+  const handleDragOver = (e, section, index) => {
+    if (dragSection !== section) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dragNode.current !== index) {
+      setDragOverIndex(index)
+    }
+  }
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null)
+  }
+
+  const handleDrop = (e, section, dropIndex) => {
+    e.preventDefault()
+    dragItemRef.current?.classList.remove('opacity-50')
+    if (dragNode.current === null || dragNode.current === dropIndex || dragSection !== section) {
+      setDragIndex(null)
+      setDragOverIndex(null)
+      dragNode.current = null
+      setDragSection(null)
+      return
+    }
+
+    let items
+    switch (section) {
+      case 'folders':
+        items = [...rootFolders]
+        break
+      case 'tags':
+        items = [...tags]
+        break
+      case 'employees':
+        items = [...employees]
+        break
+      default:
+        return
+    }
+
+    const dragged = items[dragNode.current]
+    items.splice(dragNode.current, 1)
+    items.splice(dropIndex, 0, dragged)
+
+    setDragIndex(null)
+    setDragOverIndex(null)
+    dragNode.current = null
+    setDragSection(null)
+
+    const orderedIds = items.map((item) => item.id)
+    switch (section) {
+      case 'folders':
+        onReorderFolders?.(orderedIds)
+        break
+      case 'tags':
+        onReorderTags?.(orderedIds)
+        break
+      case 'employees':
+        onReorderEmployees?.(orderedIds)
+        break
+    }
+  }
+
+  const handleDragEnd = (e) => {
+    dragItemRef.current?.classList.remove('opacity-50')
+    setDragIndex(null)
+    setDragOverIndex(null)
+    dragNode.current = null
+    setDragSection(null)
+  }
   const [expandedFolders, setExpandedFolders] = useState(new Set())
   const [tagsExpanded, setTagsExpanded] = useState(true)
   const [foldersExpanded, setFoldersExpanded] = useState(true)
+  const [employeesExpanded, setEmployeesExpanded] = useState(true)
+
+  const isAdmin = currentUser?.role === 'admin'
+
   const mainItems = [
     { key: 'all', label: 'Todas as senhas', icon: Lock },
-    ...(currentUser?.role === 'admin'
+    ...(isAdmin
       ? [{ key: 'employees', label: 'Funcionários', icon: Users }]
       : []),
   ]
@@ -135,10 +246,74 @@ export default function Sidebar({
           )
         })}
 
+        {isAdmin && employees.length > 0 && !collapsed && (
+          <>
+            <div className="flex items-center gap-0 mt-4">
+              <button
+                onClick={() => setEmployeesExpanded((prev) => !prev)}
+                className="p-1 text-text-muted hover:text-text-primary cursor-pointer shrink-0"
+              >
+                {employeesExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              </button>
+              <button
+                onClick={() => onSelectFilter?.('employees')}
+                className={`flex items-center gap-3 h-9 px-3 rounded-lg text-sm transition-colors cursor-pointer w-full ${
+                  selectedFilter === 'employees'
+                    ? 'bg-surface-active font-medium'
+                    : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
+                }`}
+              >
+                <Users size={18} className={`shrink-0 ${selectedFilter === 'employees' ? 'text-brand' : ''}`} />
+                <span className="truncate font-semibold text-xs uppercase tracking-wider text-text-muted">
+                  Funcionários ({employees.length})
+                </span>
+              </button>
+            </div>
+            {employeesExpanded && employees.map((emp, idx) => {
+              const isActive = selectedFilter === `employee:${emp.id}`
+              const isDragOver = dragOverIndex === idx && dragIndex !== idx && dragSection === 'employees'
+              return (
+                <div
+                  key={emp.id}
+                  onDragOver={(e) => handleDragOver(e, 'employees', idx)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, 'employees', idx)}
+                  onDragEnd={handleDragEnd}
+                  className={`group ${isDragOver ? 'border-t-2 border-t-brand' : ''}`}
+                >
+                  <div className="flex items-center gap-0">
+                    <span
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, 'employees', idx)}
+                      onDragEnd={handleDragEnd}
+                      className="px-1 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0"
+                    >
+                      <GripVertical size={12} />
+                    </span>
+                    <button
+                      onClick={() => onSelectFilter?.(`employee:${emp.id}`)}
+                      className={`flex items-center gap-3 h-8 px-3 rounded-lg text-sm transition-colors cursor-pointer w-full ${
+                        isActive
+                          ? 'bg-surface-active font-medium'
+                          : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
+                      }`}
+                      title={emp.name}
+                      style={{ paddingLeft: '36px' }}
+                    >
+                      <User size={14} className={`shrink-0 ${isActive ? 'text-brand' : ''}`} />
+                      <span className="truncate">{emp.name}</span>
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </>
+        )}
+
         {folders.length > 0 && (
           <>
             {collapsed ? (
-              currentUser?.role === 'admin' && (
+              isAdmin && (
                 <button
                   onClick={() => onSelectFilter?.('manage-folders')}
                   className={`w-full flex items-center justify-center h-9 rounded-lg transition-colors cursor-pointer ${
@@ -153,7 +328,7 @@ export default function Sidebar({
               )
             ) : (
               <>
-                {currentUser?.role === 'admin' ? (
+                {isAdmin ? (
                   <div className="flex items-center gap-0 mt-4">
                     <button
                       onClick={() => setFoldersExpanded((prev) => !prev)}
@@ -186,7 +361,31 @@ export default function Sidebar({
                     </p>
                   </div>
                 )}
-                {foldersExpanded && rootFolders.map((folder) => renderFolder(folder))}
+                {foldersExpanded && rootFolders.map((folder, idx) => {
+                  const isDragOver = dragOverIndex === idx && dragIndex !== idx && dragSection === 'folders'
+                  return (
+                    <div
+                      key={folder.id}
+                      onDragOver={(e) => handleDragOver(e, 'folders', idx)}
+                      onDragEnd={handleDragEnd}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, 'folders', idx)}
+                      className={`group ${isDragOver ? 'border-t-2 border-t-brand' : ''}`}
+                    >
+                      <div className="flex items-center gap-0">
+                        <span
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, 'folders', idx)}
+                          onDragEnd={handleDragEnd}
+                          className="px-1 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0"
+                        >
+                          <GripVertical size={12} />
+                        </span>
+                        {renderFolder(folder)}
+                      </div>
+                    </div>
+                  )
+                })}
               </>
             )}
           </>
@@ -195,7 +394,7 @@ export default function Sidebar({
         {tags.length > 0 && (
           <>
             {collapsed ? (
-              currentUser?.role === 'admin' && (
+              isAdmin && (
                 <button
                   onClick={() => onSelectFilter?.('manage-tags')}
                   className={`w-full flex items-center justify-center h-9 rounded-lg transition-colors cursor-pointer ${
@@ -210,7 +409,7 @@ export default function Sidebar({
               )
             ) : (
               <>
-                {currentUser?.role === 'admin' ? (
+                {isAdmin ? (
                   <div className="flex items-center gap-0 mt-4">
                     <button
                       onClick={() => setTagsExpanded((prev) => !prev)}
@@ -243,22 +442,41 @@ export default function Sidebar({
                     </p>
                   </div>
                 )}
-                {tagsExpanded && tags.map((tag) => {
+                {tagsExpanded && tags.map((tag, idx) => {
                   const isActive = selectedFilter === `tag:${tag.id}`
+                  const isDragOver = dragOverIndex === idx && dragIndex !== idx && dragSection === 'tags'
                   return (
-                    <button
+                    <div
                       key={tag.id}
-                      onClick={() => onSelectFilter?.(`tag:${tag.id}`)}
-                      className={`w-full flex items-center gap-3 h-9 px-3 rounded-lg text-sm transition-colors cursor-pointer ${
-                        isActive
-                          ? 'bg-surface-active font-medium'
-                          : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
-                      }`}
-                      title={collapsed ? tag.name : undefined}
+                      onDragOver={(e) => handleDragOver(e, 'tags', idx)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, 'tags', idx)}
+                      onDragEnd={handleDragEnd}
+                      className={`group ${isDragOver ? 'border-t-2 border-t-brand' : ''}`}
                     >
-                      <Tags size={18} className="shrink-0" style={{ color: tag.color || undefined }} />
-                      {!collapsed && <span className="truncate">{tag.name}</span>}
-                    </button>
+                      <div className="flex items-center gap-0">
+                        <span
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, 'tags', idx)}
+                          onDragEnd={handleDragEnd}
+                          className="px-1 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0"
+                        >
+                          <GripVertical size={12} />
+                        </span>
+                        <button
+                          onClick={() => onSelectFilter?.(`tag:${tag.id}`)}
+                          className={`flex items-center gap-3 h-9 px-3 rounded-lg text-sm transition-colors cursor-pointer w-full ${
+                            isActive
+                              ? 'bg-surface-active font-medium'
+                              : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
+                          }`}
+                          title={collapsed ? tag.name : undefined}
+                        >
+                          <Tags size={18} className="shrink-0" style={{ color: tag.color || undefined }} />
+                          {!collapsed && <span className="truncate">{tag.name}</span>}
+                        </button>
+                      </div>
+                    </div>
                   )
                 })}
               </>

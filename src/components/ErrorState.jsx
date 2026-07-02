@@ -1,3 +1,10 @@
+// ============================================================
+// ErrorState — estado de erro com retry
+// ============================================================
+// Exibido quando uma requisição falha. Mostra mensagem e
+// botão "Tentar novamente" se onRetry for fornecido.
+// ============================================================
+
 import { AlertTriangle } from 'lucide-react'
 import Button from './Button'
 

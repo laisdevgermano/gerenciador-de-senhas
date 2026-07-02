@@ -1,3 +1,11 @@
+// ============================================================
+// AppShell — raiz da aplicação (gerenciamento de estado)
+// ============================================================
+// Controla o fluxo: Login → Onboarding (opcional) → Dashboard
+// Salva/restaura token e user do localStorage.
+// Encapsula tudo em ThemeProvider e StoreProvider.
+// ============================================================
+
 'use client'
 
 import { useState, useEffect } from 'react'

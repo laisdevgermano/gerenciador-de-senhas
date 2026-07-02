@@ -1,3 +1,10 @@
+// ============================================================
+// Tooltip — dica flutuante ao passar o mouse
+// ============================================================
+// Exibe um texto ao hover/focus do elemento filho.
+// position → top (padrão) | bottom | left | right
+// ============================================================
+
 import { useState } from 'react'
 
 /* FUTURE: substituir por @radix-ui/react-tooltip

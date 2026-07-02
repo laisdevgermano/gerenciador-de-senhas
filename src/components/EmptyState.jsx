@@ -1,3 +1,11 @@
+// ============================================================
+// EmptyState — estado vazio com ícone e ação opcional
+// ============================================================
+// Exibido quando uma lista não tem itens (ex: nenhuma senha
+// cadastrada, nenhum funcionário). Aceita um botão `action`
+// para o usuário criar o primeiro item.
+// ============================================================
+
 import { Inbox } from 'lucide-react'
 
 export default function EmptyState({

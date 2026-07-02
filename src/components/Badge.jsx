@@ -1,3 +1,11 @@
+// ============================================================
+// Badge — etiqueta colorida (status/tag/categoria)
+// ============================================================
+// Exibe um pequeno rótulo com cor fixa via variante (brand,
+// success, warning, danger, info) ou cor dinâmica via prop
+// `color` (gera fundo e borda com opacidade automática).
+// ============================================================
+
 /* FUTURE: pode ser estendido com variantes de tamanho, ícone, etc. */
 export default function Badge({
   children,

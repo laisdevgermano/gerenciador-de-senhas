@@ -1,3 +1,14 @@
+// ============================================================
+// Button — botão reutilizável com variantes e loading
+// ============================================================
+// Props principais:
+//   variant  → primary (padrão) | secondary | ghost | danger | outline
+//   size     → sm | md (padrão) | lg
+//   loading  → true exibe spinner e desabilita o clique
+//   icon     → componente lucide-react (ex: icon={Plus})
+//   children → texto do botão
+// ============================================================
+
 import { forwardRef } from 'react'
 import { Loader2 } from 'lucide-react'
 

@@ -1,3 +1,11 @@
+// ============================================================
+// Dropdown — menu suspenso customizado
+// ============================================================
+// Recebe um `trigger` (elemento que abre o menu) e uma lista
+// de `items`. Cada item pode ter: label, icon, onClick, danger
+// (cor vermelha), separator (linha horizontal).
+// ============================================================
+
 import { useState, useRef, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
 

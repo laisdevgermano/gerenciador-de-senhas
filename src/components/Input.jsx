@@ -1,3 +1,13 @@
+// ============================================================
+// Input — campo de formulário com label, erro, hint e ícone
+// ============================================================
+// Props:
+//   label → texto exibido acima do campo
+//   error → mensagem de erro (vermelho)
+//   hint  → dica auxiliar (ex: "Mínimo 8 caracteres")
+//   icon  → ícone lucide posicionado à esquerda
+// ============================================================
+
 import { forwardRef } from 'react'
 
 /* FUTURE: integrar com React Hook Form ou Formik para validação.
