@@ -1,12 +1,28 @@
+// ============================================================
+// ESQUEMA DO BANCO DE DADOS — Prisma ORM + PostgreSQL (Neon)
+// ============================================================
+// G-Pass: gerenciador de senhas corporativo.
+// Cada model abaixo representa uma tabela no banco.
+// ============================================================
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL") // definido em .env
 }
 
+// -------------------------------------------------------
+// User — funcionários e administradores do sistema
+// -------------------------------------------------------
+// - role: "admin" ou "user" (funcionário comum)
+// - status: "active" ou "inactive"
+// - passphrase: hash bcrypt da frase secreta (login)
+// - folderId: pasta automática criada para o funcionário
+// - sortOrder: ordem de exibição no sidebar (drag-and-drop)
+// -------------------------------------------------------
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -21,13 +37,46 @@ model User {
   mfaEnabled   Boolean  @default(false)
   lastLogin    DateTime?
   publicKey    String?
+  folderId     String?
+  sortOrder    Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  folder     Folder?        @relation(fields: [folderId], references: [id])
   passwords  Password[]     @relation("PasswordCreator")
   sharedWith SharedAccess[]
 }
 
+// -------------------------------------------------------
+// Folder — pastas para organizar as senhas
+// -------------------------------------------------------
+// - parentId: auto-relacionamento para sub-pastas (árvore)
+// - sortOrder: ordem de exibição (drag-and-drop)
+// -------------------------------------------------------
+model Folder {
+  id        String   @id @default(cuid())
+  name      String
+  parentId  String?
+  color     String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent    Folder?    @relation("FolderParent", fields: [parentId], references: [id])
+  children  Folder[]   @relation("FolderParent")
+  passwords Password[]
+  users     User[]
+}
+
+// -------------------------------------------------------
+// Password — a senha em si (criptografada em trânsito)
+// -------------------------------------------------------
+// Relacionamentos:
+//   creator -> User (quem criou)
+//   folder  -> Folder (pasta opcional)
+//   tags    -> PasswordTag (N:N com Tag)
+//   sharedWith -> SharedAccess (compartilhamento)
+// -------------------------------------------------------
 model Password {
   id        String   @id @default(cuid())
   name      String
@@ -38,6 +87,7 @@ model Password {
   favorite  Boolean  @default(false)
   folderId  String?
   createdBy String
+  sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -47,28 +97,22 @@ model Password {
   sharedWith  SharedAccess[]
 }
 
-model Folder {
-  id        String   @id @default(cuid())
-  name      String
-  parentId  String?
-  color     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  parent    Folder?  @relation("FolderParent", fields: [parentId], references: [id])
-  children  Folder[] @relation("FolderParent")
-  passwords Password[]
-}
-
+// -------------------------------------------------------
+// Tag — etiquetas coloridas para categorizar senhas
+// -------------------------------------------------------
 model Tag {
   id        String   @id @default(cuid())
   name      String   @unique
   color     String?  @default("#0c11cf")
+  sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 
   passwords PasswordTag[]
 }
 
+// -------------------------------------------------------
+// PasswordTag — tabela pivô N:N entre Password e Tag
+// -------------------------------------------------------
 model PasswordTag {
   passwordId String
   tagId      String
@@ -79,6 +123,11 @@ model PasswordTag {
   @@id([passwordId, tagId])
 }
 
+// -------------------------------------------------------
+// SharedAccess — controle de acesso: quem pode ver/editar
+// -------------------------------------------------------
+// - permission: "read" (só visualizar) ou "write" (editar)
+// -------------------------------------------------------
 model SharedAccess {
   id         String   @id @default(cuid())
   passwordId String
