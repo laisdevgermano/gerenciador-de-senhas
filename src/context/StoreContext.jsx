@@ -120,7 +120,7 @@ export function StoreProvider({ children, currentUser }) {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const userId = isEmployee ? currentUser.id : null
+      const userId = isEmployee ? currentUser?.id : null
       const pwPath = userId ? `/passwords?userId=${userId}` : '/passwords'
       const folderPath = userId ? `/folders?userId=${userId}` : '/folders'
       const tagPath = userId ? `/tags?userId=${userId}` : '/tags'
