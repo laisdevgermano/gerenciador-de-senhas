@@ -1,3 +1,10 @@
+// ============================================================
+// RootLayout — layout raiz do Next.js
+// ============================================================
+// Define HTML lang, favicon, fonte Inter (Google Fonts) e
+// injeta o CSS global. O conteúdo é renderizado via children.
+// ============================================================
+
 import './globals.css'
 
 export const metadata = {

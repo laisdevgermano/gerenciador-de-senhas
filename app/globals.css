@@ -1,8 +1,76 @@
-@import "tailwindcss";
+/* ===================================================================
+ * globals.css — estilos globais e tema (claro/escuro)
+ * ATENÇÃO: Qualquer alteração aqui afeta o sistema inteiro.
+ * Teste SEMPRE em claro E escuro antes de commitar.
+ *
+ * O tema é alternado por ThemeContext.jsx, que adiciona/remove
+ * a classe .dark no elemento <html>.
+ * =================================================================== */
 
+@import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ─── brand (cor principal) ─────────────────────────────────────────
+ * brand:         cor do sistema — botões primary, links, ícones
+ *                ativos, indicação de seleção (sidebar, tabs)
+ * brand-hover:   hover dos botões primary
+ * brand-light:   bg de linha selecionada na tabela, Avatar,
+ *                ícone de senha, fundo "Compartilhado com"
+ * brand-muted:   bg sutil de badges variant="brand"
+ * ───────────────────────────────────────────────────────────────────*/
 @theme {
+  --color-brand: #0c11cf;
+  --color-brand-hover: #0a0fb0;
+  --color-brand-light: #eef2ff;
+  --color-brand-muted: #dce3ff;
+
+  /* ─── superfícies ────────────────────────────────────────────────
+   * surface:           Sidebar, cards (Employee/Tag/FolderScreen),
+   *                    Modal, header, Input, Select, Dropdown, tabela
+   * surface-secondary: fundo da página (body, LoginScreen,
+   *                    DashboardScreen, SettingsScreen)
+   * surface-tertiary:  hover de linhas (tabela, sidebar),
+   *                    fundo de textarea, preview, badges default
+   * surface-active:    item ativo no sidebar, aba ativa no Settings
+   * ────────────────────────────────────────────────────────────────*/
+  --color-surface: #fefcf5;
+  --color-surface-secondary: #faf7f0;
+  --color-surface-tertiary: #f5f0e8;
+  --color-surface-active: #e8e2d8;
+
+  /* ─── bordas ─────────────────────────────────────────────────────
+   * border:       inputs, tabelas, modais, sidebar, cards, selects
+   * border-hover: hover de cards (EmployeeScreen, TagScreen)
+   * ────────────────────────────────────────────────────────────────*/
+  --color-border: #e5ddd0;
+  --color-border-hover: #d6cdbe;
+
+  /* ─── textos ─────────────────────────────────────────────────────
+   * text-primary:   títulos, labels, corpo principal
+   * text-secondary: descrições, metadados
+   * text-muted:     placeholders, hints, contadores, texto inativo
+   * ────────────────────────────────────────────────────────────────*/
+  --color-text-primary: #2c2a28;
+  --color-text-secondary: #6b6560;
+  --color-text-muted: #a09890;
+
+  /* ─── semânticas ─────────────────────────────────────────────────
+   * danger:        botão danger, texto de erro, hover "Excluir"
+   * danger-hover:  hover do botão danger
+   * success:       badges "Ativo", mensagens de sucesso
+   * warning:       badges "Inativo"
+   * ────────────────────────────────────────────────────────────────*/
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+
+  /* ─── cores auxiliares ───────────────────────────────────────────
+   * blue-500: idêntico à brand
+   * blue-50..900: escada de azul
+   * purple/amber/rose/emerald: opções de cor nos seletores de
+   * pasta (FolderScreen) e tag (TagScreen)
+   * ────────────────────────────────────────────────────────────────*/
   --color-blue-50: #eef2ff;
   --color-blue-100: #dce3ff;
   --color-blue-200: #b8c7ff;
@@ -13,32 +81,17 @@
   --color-blue-700: #090d91;
   --color-blue-800: #070a72;
   --color-blue-900: #050853;
-
-  --color-brand: #0c11cf;
-  --color-brand-hover: #0a0fb0;
-  --color-brand-light: #eef2ff;
-  --color-brand-muted: #dce3ff;
-
-  --color-surface: #fefcf5;
-  --color-surface-secondary: #faf7f0;
-  --color-surface-tertiary: #f5f0e8;
-  --color-surface-active: #e8e2d8;
-  --color-border: #e5ddd0;
-  --color-border-hover: #d6cdbe;
-  --color-text-primary: #2c2a28;
-  --color-text-secondary: #6b6560;
-  --color-text-muted: #a09890;
-
-  --color-danger: #dc2626;
-  --color-danger-hover: #b91c1c;
-  --color-success: #16a34a;
-  --color-warning: #d97706;
   --color-purple: #7c3aed;
   --color-amber: #d97706;
   --color-rose: #e11d48;
   --color-emerald: #059669;
 }
 
+/* ─── .dark — tema escuro ──────────────────────────────────────────
+ * Substitui surface, border e text por valores translúcidos
+ * sobre fundo preto. brand-light/muted viram azul translúcido.
+ * body ganha gradiente fixo #000000 → #0a0f5e.
+ * ───────────────────────────────────────────────────────────────────*/
 .dark {
   --color-surface: rgba(0, 0, 0, 0.7);
   --color-surface-secondary: rgba(0, 0, 0, 0.5);
@@ -49,7 +102,6 @@
   --color-text-primary: #f1f5f9;
   --color-text-secondary: #cbd5e1;
   --color-text-muted: #7e8ba6;
-
   --color-brand-light: rgba(12, 17, 207, 0.2);
   --color-brand-muted: rgba(12, 17, 207, 0.15);
 }
@@ -59,6 +111,11 @@
   background-attachment: fixed;
 }
 
+/* ─── body — fundo e fonte padrão ─────────────────────────────────
+ * background-color: usa surface-secondary (claro) ou gradiente
+ *                   (escuro). Afeta TODAS as telas.
+ * font-family: Inter (carregada via Google Fonts no layout)
+ * ───────────────────────────────────────────────────────────────────*/
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   color: var(--color-text-primary);
@@ -67,24 +124,24 @@ body {
   transition: background-color 0.2s, color 0.2s;
 }
 
+/* ─── scrollbar ──────────────────────────────────────────────────
+ * Scrollbar fina (6px) com cor baseada em border.
+ * Afeta qualquer container com overflow.
+ * ───────────────────────────────────────────────────────────────────*/
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-hover);
 }
-
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
@@ -94,6 +151,13 @@ body {
   box-sizing: border-box;
 }
 
+/* ─── .tag-pill — botão de tag no formulário de senha ──────────
+ * Usado exclusivamente no PasswordFormModal para exibir tags
+ * clicáveis com cor dinâmica e efeito glow no hover.
+ * O efeito glow (boxShadow) é aplicado via style inline no
+ * próprio componente (src/screens/PasswordFormModal.jsx).
+ * Se alterar .tag-pill, verificar o style inline também.
+ * ───────────────────────────────────────────────────────────────────*/
 .tag-pill {
   display: inline-flex;
   align-items: center;
@@ -106,7 +170,6 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
 }
-
 .tag-pill:hover {
   filter: brightness(1.3);
 }
