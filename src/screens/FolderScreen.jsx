@@ -1,4 +1,11 @@
-import { useState } from 'react'
+// ============================================================
+// FolderScreen — gerenciamento de pastas (admin)
+// ============================================================
+// CRUD de pastas com suporte a subpastas (parentId).
+// Exibe árvore expansível com drag-and-drop para reordenação.
+// ============================================================
+
+import { useState, useRef } from 'react'
 import {
   FolderClosed,
   Plus,
@@ -7,6 +14,7 @@ import {
   FolderPlus,
   ChevronRight,
   ChevronDown,
+  GripVertical,
 } from 'lucide-react'
 import Button from '../components/Button'
 import Modal from '../components/Modal'
@@ -15,7 +23,7 @@ import EmptyState from '../components/EmptyState'
 import { useStore } from '../context/StoreContext'
 
 export default function FolderScreen() {
-  const { folders, getChildrenFolders, addFolder, updateFolder, deleteFolder, getPasswordsByFolder } = useStore()
+  const { folders, getChildrenFolders, addFolder, updateFolder, deleteFolder, getPasswordsByFolder, reorderFolders } = useStore()
   const [showModal, setShowModal] = useState(false)
   const [editingFolder, setEditingFolder] = useState(null)
   const [expanded, setExpanded] = useState({})
@@ -34,6 +42,10 @@ export default function FolderScreen() {
     if (confirm(msg)) {
       await deleteFolder(folder.id)
     }
+  }
+
+  const handleReorder = (orderedIds) => {
+    reorderFolders(orderedIds)
   }
 
   return (
@@ -81,6 +93,7 @@ export default function FolderScreen() {
             }}
             onDelete={handleDelete}
             getChildren={getChildrenFolders}
+            onReorder={handleReorder}
           />
         </div>
       )}
@@ -108,20 +121,89 @@ export default function FolderScreen() {
   )
 }
 
-function FolderTree({ folders, expanded, onToggle, onEdit, onDelete, getChildren, depth = 0 }) {
+function FolderTree({ folders, expanded, onToggle, onEdit, onDelete, getChildren, onReorder, depth = 0 }) {
+  const [dragIndex, setDragIndex] = useState(null)
+  const [dragOverIndex, setDragOverIndex] = useState(null)
+  const dragNode = useRef(null)
+
+  const handleDragStart = (e, idx) => {
+    dragNode.current = idx
+    setDragIndex(idx)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', folders[idx].id)
+    setTimeout(() => {
+      e.target.closest('[data-folder-row]')?.classList.add('opacity-50')
+    }, 0)
+  }
+
+  const handleDragOver = (e, idx) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dragNode.current !== idx) {
+      setDragOverIndex(idx)
+    }
+  }
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null)
+  }
+
+  const handleDrop = (e, dropIdx) => {
+    e.preventDefault()
+    e.target.closest('[data-folder-row]')?.classList.remove('opacity-50')
+    if (dragNode.current === null || dragNode.current === dropIdx) {
+      setDragIndex(null)
+      setDragOverIndex(null)
+      dragNode.current = null
+      return
+    }
+
+    const newFolders = [...folders]
+    const dragged = newFolders[dragNode.current]
+    newFolders.splice(dragNode.current, 1)
+    newFolders.splice(dropIdx, 0, dragged)
+
+    setDragIndex(null)
+    setDragOverIndex(null)
+    dragNode.current = null
+
+    onReorder?.(newFolders.map((f) => f.id))
+  }
+
+  const handleDragEnd = (e) => {
+    e.target.closest('[data-folder-row]')?.classList.remove('opacity-50')
+    setDragIndex(null)
+    setDragOverIndex(null)
+    dragNode.current = null
+  }
+
   return (
     <>
-      {folders.map((folder) => {
+      {folders.map((folder, idx) => {
         const children = getChildren(folder.id)
         const hasChildren = children.length > 0
         const isExpanded = expanded[folder.id]
+        const isDragOver = dragOverIndex === idx && dragIndex !== idx
 
         return (
           <div key={folder.id}>
             <div
-              className="flex items-center gap-2 px-4 py-3 hover:bg-surface-tertiary transition-colors border-b border-border/50 last:border-b-0 group"
+              data-folder-row
+              draggable
+              onDragStart={(e) => handleDragStart(e, idx)}
+              onDragOver={(e) => handleDragOver(e, idx)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, idx)}
+              onDragEnd={handleDragEnd}
+              className={`flex items-center gap-2 px-4 py-3 hover:bg-surface-tertiary transition-colors border-b border-border/50 last:border-b-0 group ${
+                isDragOver ? 'border-t-2 border-t-brand' : ''
+              }`}
               style={{ paddingLeft: 16 + depth * 24 }}
             >
+              <div className="text-text-muted cursor-grab active:cursor-grabbing shrink-0">
+                <GripVertical size={14} />
+              </div>
+
               <button
                 onClick={() => hasChildren && onToggle(folder.id)}
                 className={`p-0.5 rounded text-text-muted hover:text-text-primary transition-colors cursor-pointer ${
@@ -168,6 +250,7 @@ function FolderTree({ folders, expanded, onToggle, onEdit, onDelete, getChildren
                 onEdit={onEdit}
                 onDelete={onDelete}
                 getChildren={getChildren}
+                onReorder={onReorder}
                 depth={depth + 1}
               />
             )}

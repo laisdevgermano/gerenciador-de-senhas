@@ -1,3 +1,10 @@
+// ============================================================
+// TagScreen — gerenciamento de tags (admin)
+// ============================================================
+// CRUD de tagsetiquetas com nome e cor.
+// Exibe cards com contagem de senhas vinculadas.
+// ============================================================
+
 import { useState } from 'react'
 import { Tags, Plus, Edit3, Trash2, X } from 'lucide-react'
 import Button from '../components/Button'

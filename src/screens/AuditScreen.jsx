@@ -1,3 +1,10 @@
+// ============================================================
+// AuditScreen — trilha de auditoria (admin)
+// ============================================================
+// Carrega eventos de GET /api/audit e exibe lista ordenada
+// por data. Tipos: senha_criada, senha_editada, usuario_criado.
+// ============================================================
+
 import { useState, useEffect } from 'react'
 import { Shield, Clock, User, KeyRound } from 'lucide-react'
 import EmptyState from '../components/EmptyState'

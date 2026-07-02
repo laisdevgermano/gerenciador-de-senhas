@@ -1,3 +1,11 @@
+// ============================================================
+// ShareModal — compartilhamento de senha com funcionários
+// ============================================================
+// Abre um modal com busca de funcionários, checkbox de seleção
+// e seletor de permissão (read/write). Exibe badges das
+// seleções atuais com opção de remover.
+// ============================================================
+
 import { useState } from 'react'
 import { Search, Share2, X } from 'lucide-react'
 import Modal from '../components/Modal'

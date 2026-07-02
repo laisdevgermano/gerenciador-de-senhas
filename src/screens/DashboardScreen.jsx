@@ -1,3 +1,17 @@
+// ============================================================
+// DashboardScreen — tela principal do sistema
+// ============================================================
+// Composição: Sidebar (navegação) + Main (conteúdo)
+// Gerencia:
+//   - Filtro selecionado (all, folder:, tag:, employee:)
+//   - Busca textual (filtra por nome, username, url, notes)
+//   - CRUD de senhas (criar/editar/excluir via modais)
+//   - Compartilhamento (ShareModal)
+//   - Navegação entre Settings, Employees, Folders, Tags
+//   - Reordenação de senhas via drag-and-drop na tabela
+//   - Painel de detalhes da senha selecionada
+// ============================================================
+
 import { useState, useMemo, useEffect } from 'react'
 import {
   Globe,
@@ -13,12 +27,12 @@ import {
   FolderClosed,
   Tags,
   Lock,
+  Search,
 } from 'lucide-react'
 import { useStore } from '../context/StoreContext'
 import Sidebar from '../components/Sidebar'
 import Table from '../components/Table'
 import Badge from '../components/Badge'
-import Tooltip from '../components/Tooltip'
 import Button from '../components/Button'
 import EmptyState from '../components/EmptyState'
 import ThemeToggle from '../components/ThemeToggle'
@@ -29,20 +43,21 @@ import EmployeeScreen from './EmployeeScreen'
 import FolderScreen from './FolderScreen'
 import TagScreen from './TagScreen'
 
-/* FUTURE: usar react-router-dom para navegação
- *   const navigate = useNavigate()
- *   <Route path="/dashboard" element={<DashboardScreen />} /> */
 export default function DashboardScreen({ onLogout }) {
   const {
     passwords,
     folders,
     tags,
+    employees,
     loading,
     currentUser,
-    employees,
     addPassword,
     updatePassword,
     deletePassword,
+    reorderPasswords,
+    reorderFolders,
+    reorderTags,
+    reorderEmployees,
     getFolderById,
     getTagById,
     getUserById,
@@ -60,6 +75,7 @@ export default function DashboardScreen({ onLogout }) {
   const [editingPassword, setEditingPassword] = useState(null)
   const [showShareModal, setShowShareModal] = useState(false)
   const [sharingPassword, setSharingPassword] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     setSelectedPassword(null)
@@ -68,30 +84,41 @@ export default function DashboardScreen({ onLogout }) {
     setEditingPassword(null)
   }, [selectedFilter])
 
-  /* FUTURE: carregamento real com skeleton loader
-   *   useEffect(() => {
-   *     setLoading(true)
-   *     api.get('/passwords').then(data => {
-   *       setPasswords(data)
-   *       setLoading(false)
-   *     })
-   *   }, []) */
+  const isAdmin = currentUser?.role === 'admin'
 
   const filteredPasswords = useMemo(() => {
-    if (selectedFilter === 'all') return passwords
-    if (selectedFilter.startsWith('folder:')) {
+    let result = passwords
+
+    if (selectedFilter === 'all') {
+      result = passwords
+    } else if (selectedFilter.startsWith('folder:')) {
       const folderId = selectedFilter.split(':')[1]
-      return passwords.filter((p) => p.folderId === folderId)
-    }
-    if (selectedFilter.startsWith('tag:')) {
+      result = passwords.filter((p) => p.folderId === folderId)
+    } else if (selectedFilter.startsWith('tag:')) {
       const tagId = selectedFilter.split(':')[1]
-      return passwords.filter((p) => p.tags.includes(tagId))
+      result = passwords.filter((p) => p.tags.includes(tagId))
+    } else if (selectedFilter.startsWith('employee:')) {
+      const empId = selectedFilter.split(':')[1]
+      result = passwords.filter((p) =>
+        p.sharedWith?.some((sa) => sa.userId === empId)
+      )
     }
-    return passwords
-  }, [passwords, selectedFilter])
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter((p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.username.toLowerCase().includes(q) ||
+        (p.url && p.url.toLowerCase().includes(q)) ||
+        (p.notes && p.notes.toLowerCase().includes(q))
+      )
+    }
+
+    return result
+  }, [passwords, selectedFilter, searchQuery])
 
   const visibleFolders = useMemo(() => {
-    if (!currentUser || currentUser.role === 'admin') return folders
+    if (!currentUser || isAdmin) return folders
     const folderIdsWithAccess = new Set(
       passwords.map((p) => p.folderId).filter(Boolean)
     )
@@ -104,15 +131,15 @@ export default function DashboardScreen({ onLogout }) {
       }
     }
     return folders.filter((f) => visible.has(f.id))
-  }, [folders, passwords, currentUser])
+  }, [folders, passwords, currentUser, isAdmin])
 
   const visibleTags = useMemo(() => {
-    if (!currentUser || currentUser.role === 'admin') return tags
+    if (!currentUser || isAdmin) return tags
     const tagIdsWithAccess = new Set(
       passwords.flatMap((p) => p.tags ?? [])
     )
     return tags.filter((t) => tagIdsWithAccess.has(t.id))
-  }, [tags, passwords, currentUser])
+  }, [tags, passwords, currentUser, isAdmin])
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-'
@@ -126,7 +153,6 @@ export default function DashboardScreen({ onLogout }) {
 
   const copyToClipboard = (text) => {
     navigator.clipboard?.writeText(text)
-    /* FUTURE: mostrar toast de confirmação */
   }
 
   const handleEditPassword = (pw) => {
@@ -150,6 +176,20 @@ export default function DashboardScreen({ onLogout }) {
   const handleShare = (pw) => {
     setSharingPassword(pw)
     setShowShareModal(true)
+  }
+
+  const getHeaderTitle = () => {
+    if (isCreating) return 'Nova senha'
+    if (selectedFilter === 'all') return 'Todas as senhas'
+    if (selectedFilter.startsWith('folder:'))
+      return getFolderById(selectedFilter.split(':')[1])?.name || 'Pasta'
+    if (selectedFilter.startsWith('tag:'))
+      return getTagById(selectedFilter.split(':')[1])?.name || 'Tag'
+    if (selectedFilter.startsWith('employee:')) {
+      const emp = getUserById(selectedFilter.split(':')[1])
+      return emp?.name || 'Funcionário'
+    }
+    return ''
   }
 
   const columns = [
@@ -224,6 +264,7 @@ export default function DashboardScreen({ onLogout }) {
         <Sidebar
           folders={visibleFolders}
           tags={visibleTags}
+          employees={employees}
           selectedFilter={selectedFilter}
           onSelectFilter={setSelectedFilter}
           onNewPassword={handleNewPassword}
@@ -231,6 +272,9 @@ export default function DashboardScreen({ onLogout }) {
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
           currentUser={currentUser}
+          onReorderFolders={reorderFolders}
+          onReorderTags={reorderTags}
+          onReorderEmployees={reorderEmployees}
         />
         <main className="flex-1 overflow-y-auto">
           <SettingsScreen />
@@ -245,6 +289,7 @@ export default function DashboardScreen({ onLogout }) {
         <Sidebar
           folders={visibleFolders}
           tags={visibleTags}
+          employees={employees}
           selectedFilter={selectedFilter}
           onSelectFilter={setSelectedFilter}
           onNewPassword={handleNewPassword}
@@ -252,6 +297,9 @@ export default function DashboardScreen({ onLogout }) {
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
           currentUser={currentUser}
+          onReorderFolders={reorderFolders}
+          onReorderTags={reorderTags}
+          onReorderEmployees={reorderEmployees}
         />
         <main className="flex-1 overflow-y-auto">
           <EmployeeScreen />
@@ -266,6 +314,7 @@ export default function DashboardScreen({ onLogout }) {
         <Sidebar
           folders={visibleFolders}
           tags={visibleTags}
+          employees={employees}
           selectedFilter={selectedFilter}
           onSelectFilter={setSelectedFilter}
           onNewPassword={handleNewPassword}
@@ -273,6 +322,9 @@ export default function DashboardScreen({ onLogout }) {
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
           currentUser={currentUser}
+          onReorderFolders={reorderFolders}
+          onReorderTags={reorderTags}
+          onReorderEmployees={reorderEmployees}
         />
         <main className="flex-1 overflow-y-auto">
           <FolderScreen />
@@ -287,6 +339,7 @@ export default function DashboardScreen({ onLogout }) {
         <Sidebar
           folders={visibleFolders}
           tags={visibleTags}
+          employees={employees}
           selectedFilter={selectedFilter}
           onSelectFilter={setSelectedFilter}
           onNewPassword={handleNewPassword}
@@ -294,6 +347,9 @@ export default function DashboardScreen({ onLogout }) {
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
           currentUser={currentUser}
+          onReorderFolders={reorderFolders}
+          onReorderTags={reorderTags}
+          onReorderEmployees={reorderEmployees}
         />
         <main className="flex-1 overflow-y-auto">
           <TagScreen />
@@ -307,30 +363,40 @@ export default function DashboardScreen({ onLogout }) {
       <Sidebar
         folders={visibleFolders}
         tags={visibleTags}
+        employees={employees}
         selectedFilter={selectedFilter}
         onSelectFilter={setSelectedFilter}
         onNewPassword={handleNewPassword}
         onLogout={onLogout}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-        currentUser={currentUser}
-      />
+          currentUser={currentUser}
+          onReorderFolders={reorderFolders}
+          onReorderTags={reorderTags}
+          onReorderEmployees={reorderEmployees}
+        />
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 border-b border-border bg-surface flex items-center justify-between px-6 shrink-0">
-          <div>
+        <header className="h-14 border-b border-border bg-surface flex items-center justify-between px-6 shrink-0 gap-4">
+          <div className="min-w-0">
             <h1 className="text-sm font-semibold text-text-primary">
-              {isCreating ? 'Nova senha' : selectedFilter === 'all' ? 'Todas as senhas' : ''}
-              {!isCreating && selectedFilter.startsWith('folder:') &&
-                getFolderById(selectedFilter.split(':')[1])?.name}
-              {!isCreating && selectedFilter.startsWith('tag:') &&
-                getTagById(selectedFilter.split(':')[1])?.name}
+              {getHeaderTitle()}
             </h1>
             <p className="text-xs text-text-muted">{isCreating ? 'Preencha os dados da nova senha' : `${filteredPasswords.length} recursos`}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+              <input
+                type="text"
+                placeholder="Pesquisar..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 w-52 rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
+              />
+            </div>
             <ThemeToggle />
-            {selectedFilter === 'all' && !isCreating && (
+            {(selectedFilter === 'all' || selectedFilter.startsWith('folder:') || selectedFilter.startsWith('employee:')) && !isCreating && (
               <Button size="sm" onClick={handleNewPassword}>
                 Nova senha
               </Button>
@@ -358,7 +424,9 @@ export default function DashboardScreen({ onLogout }) {
             <EmptyState
               title="Nenhuma senha encontrada"
               description={
-                'Sua lista está vazia. Crie sua primeira senha.'
+                searchQuery
+                  ? 'Nenhuma senha corresponde à sua pesquisa.'
+                  : 'Sua lista está vazia. Crie sua primeira senha.'
               }
               action={
                 <Button size="sm" onClick={handleNewPassword}>
@@ -406,6 +474,7 @@ export default function DashboardScreen({ onLogout }) {
                 selectedId={selectedPassword?.id}
                 onRowClick={(row) => setSelectedPassword(row)}
                 emptyMessage="Nenhum recurso encontrado."
+                onReorder={reorderPasswords}
               />
             </div>
           )}
@@ -420,8 +489,6 @@ export default function DashboardScreen({ onLogout }) {
             setSharingPassword(null)
           }}
           onShare={(sharedWith) => {
-            /* FUTURE: chamada de API real
-             *   await api.post(`/passwords/${sharingPassword.id}/share`, { userIds: sharedWith }) */
             updatePassword(sharingPassword.id, { sharedWith })
             setShowShareModal(false)
             setSharingPassword(null)

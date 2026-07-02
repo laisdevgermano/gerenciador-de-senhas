@@ -1,5 +1,14 @@
-import { useState } from 'react'
-import { Users, Plus, Edit3, Trash2, X, Eye, EyeOff } from 'lucide-react'
+// ============================================================
+// EmployeeScreen — gerenciamento de funcionários (admin)
+// ============================================================
+// CRUD de funcionários com:
+//   - Pesquisa textual (nome, email, cargo, departamento, tel)
+//   - Criação automática de pasta com o nome do funcionário
+//   - Controle de acesso a senhas (permissão read/write)
+// ============================================================
+
+import { useState, useMemo } from 'react'
+import { Users, Plus, Edit3, Trash2, X, Eye, EyeOff, FolderClosed, ExternalLink, Search } from 'lucide-react'
 import Button from '../components/Button'
 import Modal from '../components/Modal'
 import Input from '../components/Input'
@@ -8,27 +17,77 @@ import EmptyState from '../components/EmptyState'
 import { useStore } from '../context/StoreContext'
 
 export default function EmployeeScreen() {
-  const { employees, passwords, addEmployee, updateEmployee, deleteEmployee, setEmployeeAccess, getEmployeeAccess } = useStore()
+  const { employees, passwords, addEmployee, updateEmployee, deleteEmployee, setEmployeeAccess, getEmployeeAccess, getFolderByName, addFolder } = useStore()
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const filteredEmployees = useMemo(() => {
+    if (!searchQuery.trim()) return employees
+    const q = searchQuery.toLowerCase()
+    return employees.filter((emp) =>
+      emp.name.toLowerCase().includes(q) ||
+      emp.email.toLowerCase().includes(q) ||
+      (emp.cargo && emp.cargo.toLowerCase().includes(q)) ||
+      (emp.departamento && emp.departamento.toLowerCase().includes(q)) ||
+      (emp.telefone && emp.telefone.includes(q))
+    )
+  }, [employees, searchQuery])
+
+  const handleSave = async (data) => {
+    setSaving(true)
+    try {
+      if (editing) {
+        const { access, ...rest } = data
+        await updateEmployee(editing.id, rest)
+        if (access) await setEmployeeAccess(editing.id, access)
+      } else {
+        const { access, ...rest } = data
+        const emp = await addEmployee(rest)
+        if (access?.length) await setEmployeeAccess(emp.id, access)
+        const existing = getFolderByName(rest.name)
+        if (!existing) {
+          const folder = await addFolder({ name: rest.name })
+          await updateEmployee(emp.id, { folderId: folder.id })
+          emp.folderId = folder.id
+        }
+      }
+      setShowModal(false)
+      setEditing(null)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="p-6 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
-        <div>
+      <div className="flex items-center justify-between mb-6 gap-4">
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold text-text-primary">Funcionários</h2>
           <p className="text-sm text-text-muted">Cadastre e gerencie o acesso dos funcionários</p>
         </div>
-        <Button
-          icon={Plus}
-          onClick={() => {
-            setEditing(null)
-            setShowModal(true)
-          }}
-        >
-          Novo funcionário
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+            <input
+              type="text"
+              placeholder="Pesquisar..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-9 w-52 rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
+            />
+          </div>
+          <Button
+            icon={Plus}
+            onClick={() => {
+              setEditing(null)
+              setShowModal(true)
+            }}
+          >
+            Novo funcionário
+          </Button>
+        </div>
       </div>
 
       {employees.length === 0 ? (
@@ -42,10 +101,17 @@ export default function EmployeeScreen() {
             </Button>
           }
         />
+      ) : filteredEmployees.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="Nenhum funcionário encontrado"
+          description="Nenhum funcionário corresponde à sua pesquisa."
+        />
       ) : (
         <div className="space-y-3">
-          {employees.map((emp) => {
+          {filteredEmployees.map((emp) => {
             const empAccess = getEmployeeAccess(emp.id)
+            const empFolder = getFolderByName(emp.name)
             return (
               <div
                 key={emp.id}
@@ -81,6 +147,12 @@ export default function EmployeeScreen() {
                   <Badge variant={emp.status === 'active' ? 'success' : 'warning'}>
                     {emp.status === 'active' ? 'Ativo' : 'Inativo'}
                   </Badge>
+                  {empFolder && (
+                    <Badge color="#0c11cf" className="cursor-pointer hover:opacity-80" title="Abrir pasta do funcionário">
+                      <FolderClosed size={12} />
+                      {empFolder.name}
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-border">
@@ -111,24 +183,7 @@ export default function EmployeeScreen() {
             setShowModal(false)
             setEditing(null)
           }}
-          onSave={async (data) => {
-            setSaving(true)
-            try {
-              if (editing) {
-                const { access, ...rest } = data
-                await updateEmployee(editing.id, rest)
-                if (access) await setEmployeeAccess(editing.id, access)
-              } else {
-                const { access, ...rest } = data
-                const emp = await addEmployee(rest)
-                if (access?.length) await setEmployeeAccess(emp.id, access)
-              }
-              setShowModal(false)
-              setEditing(null)
-            } finally {
-              setSaving(false)
-            }
-          }}
+          onSave={handleSave}
           onDelete={async (id) => {
             await deleteEmployee(id)
             setShowModal(false)

@@ -1,3 +1,11 @@
+// ============================================================
+// LoginScreen — autenticação em duas etapas
+// ============================================================
+// 1. Informa o email → 2. Informa a frase secreta
+// Faz POST /api/auth/login, salva token + user no localStorage
+// e chama onLogin(userData) em caso de sucesso.
+// ============================================================
+
 import { useState } from 'react'
 import { Lock, Eye, EyeOff, KeyRound } from 'lucide-react'
 import Button from '../components/Button'

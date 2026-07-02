@@ -1,3 +1,12 @@
+// ============================================================
+// OnboardingScreen — tutorial inicial (primeiro acesso)
+// ============================================================
+// Guia o novo usuário por 3 etapas:
+// 1. Explicação da conta criptografada
+// 2. Download da chave privada (placeholder futura)
+// 3. Proteção com frase secreta (seguirá no fluxo de login)
+// ============================================================
+
 import { useState } from 'react'
 import { Lock, Download, KeyRound, Shield, ArrowRight, Check } from 'lucide-react'
 import Button from '../components/Button'

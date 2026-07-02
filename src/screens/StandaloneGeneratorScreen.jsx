@@ -1,3 +1,11 @@
+// ============================================================
+// StandaloneGeneratorScreen — gerador de senhas
+// ============================================================
+// Página independente (acessada sem login) que gera senhas
+// aleatórias com opções de tamanho, charset e exclusão de
+// caracteres ambíguos. Exibe entropia estimada.
+// ============================================================
+
 import { useState, useCallback } from 'react'
 import {
   Key,

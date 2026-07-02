@@ -1,3 +1,11 @@
+// ============================================================
+// PasswordFormModal — formulário de criação/edição de senha
+// ============================================================
+// Funciona como modal (asModal=true) ou como painel inline
+// (asModal=false). Campos: nome, URL, usuário, senha, pasta,
+// tags, compartilhamento com funcionários, observações.
+// ============================================================
+
 import { useState } from 'react'
 import {
   Eye,
