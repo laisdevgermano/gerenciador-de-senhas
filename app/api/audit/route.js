@@ -12,7 +12,7 @@ import { verifyAuth, unauthorized } from '@/lib/auth'
 
 export async function GET(request) {
   // Apenas administradores podem acessar
-  const auth = verifyAuth(request)
+  const auth = await verifyAuth(request)
   if (!auth || auth.role !== 'admin') return unauthorized()
 
   try {

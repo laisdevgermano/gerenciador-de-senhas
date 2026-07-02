@@ -14,7 +14,7 @@ import { verifyAuth, unauthorized } from '@/lib/auth'
 // Lista senhas. Se ?userId= for passado, filtra apenas as
 // que foram compartilhadas com aquele usuário.
 export async function GET(request) {
-  const auth = verifyAuth(request)
+  const auth = await verifyAuth(request)
   if (!auth) return unauthorized()
   try {
     const { searchParams } = new URL(request.url)
@@ -48,7 +48,7 @@ export async function GET(request) {
 // Admin pode criar para qualquer um; funcionário só pode criar
 // com createdBy = próprio ID (não pode se passar por outro)
 export async function POST(request) {
-  const auth = verifyAuth(request)
+  const auth = await verifyAuth(request)
   if (!auth) return unauthorized()
   try {
     const data = await request.json()
@@ -85,7 +85,7 @@ export async function POST(request) {
 // Reordena senhas via drag-and-drop (atualização em lote)
 // Recebe { order: [{ id, sortOrder }] }
 export async function PUT(request) {
-  const auth = verifyAuth(request)
+  const auth = await verifyAuth(request)
   if (!auth) return unauthorized()
   try {
     const { order } = await request.json()

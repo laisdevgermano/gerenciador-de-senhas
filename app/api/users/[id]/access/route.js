@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma'
 import { verifyAuth, unauthorized } from '@/lib/auth'
 
 export async function GET(request, { params }) {
-  const auth = verifyAuth(request)
+  const auth = await verifyAuth(request)
   if (!auth || auth.role !== 'admin') return unauthorized()
   try {
     const { id } = await params
@@ -18,7 +18,7 @@ export async function GET(request, { params }) {
 }
 
 export async function PUT(request, { params }) {
-  const auth = verifyAuth(request)
+  const auth = await verifyAuth(request)
   if (!auth || auth.role !== 'admin') return unauthorized()
 
   try {

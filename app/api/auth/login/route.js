@@ -36,9 +36,9 @@ export async function POST(request) {
     // Atualiza o timestamp do último login
     await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } })
 
-    // Gera token JWT com userId e role (expira em 7 dias)
+    // Gera token JWT com userId, role e tokenVersion (expira em 7 dias)
     const token = jwt.sign(
-      { userId: user.id, role: user.role },
+      { userId: user.id, role: user.role, tokenVersion: user.tokenVersion },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     )

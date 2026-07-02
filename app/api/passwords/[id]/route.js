@@ -14,7 +14,7 @@ import { verifyAuth, unauthorized } from '@/lib/auth'
 // Admin pode editar qualquer senha; funcionário precisa ter
 // permissão "write" no SharedAccess da senha.
 export async function PUT(request, { params }) {
-  const auth = verifyAuth(request)
+  const auth = await verifyAuth(request)
   if (!auth) return unauthorized()
   try {
     const { id } = await params
@@ -59,7 +59,7 @@ export async function PUT(request, { params }) {
 // Exclui uma senha (cascade deleta PasswordTag e SharedAccess)
 // Admin pode excluir qualquer uma; funcionário precisa de "write"
 export async function DELETE(request, { params }) {
-  const auth = verifyAuth(request)
+  const auth = await verifyAuth(request)
   if (!auth) return unauthorized()
   try {
     const { id } = await params

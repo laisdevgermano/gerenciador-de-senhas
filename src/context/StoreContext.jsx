@@ -27,12 +27,22 @@ async function fetchWithTimeout(url, options = {}) {
 
 // Objeto com métodos HTTP (GET, POST, PUT, DELETE) que já
 // injetam o token JWT e tratam erros básicos.
+function handleUnauthorized(res) {
+  if (res.status === 401) {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    window.location.reload()
+    throw new Error('Sessão expirada')
+  }
+}
+
 const api = {
   async get(path) {
     const token = localStorage.getItem('token')
     const res = await fetchWithTimeout(`/api${path}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
+    handleUnauthorized(res)
     if (!res.ok) throw new Error(`Erro ao buscar ${path}`)
     return res.json()
   },
@@ -46,6 +56,7 @@ const api = {
       },
       body: JSON.stringify(body),
     })
+    handleUnauthorized(res)
     if (!res.ok) throw new Error(`Erro ao criar em ${path}`)
     return res.json()
   },
@@ -59,6 +70,7 @@ const api = {
       },
       body: JSON.stringify(body),
     })
+    handleUnauthorized(res)
     if (!res.ok) throw new Error(`Erro ao atualizar ${path}`)
     return res.json()
   },
@@ -68,6 +80,7 @@ const api = {
       method: 'DELETE',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
+    handleUnauthorized(res)
     if (!res.ok) throw new Error(`Erro ao excluir ${path}`)
     return res.json()
   },

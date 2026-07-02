@@ -4,14 +4,17 @@ import prisma from '@/lib/prisma'
 import { verifyAuth, unauthorized } from '@/lib/auth'
 
 export async function PUT(request, { params }) {
-  const auth = verifyAuth(request)
+  const auth = await verifyAuth(request)
   if (!auth || auth.role !== 'admin') return unauthorized()
   try {
     const { id } = await params
     const data = await request.json()
+
     if (data.passphrase) {
       data.passphrase = await bcrypt.hash(data.passphrase, 10)
+      data.tokenVersion = { increment: 1 }
     }
+
     const user = await prisma.user.update({ where: { id }, data })
     return NextResponse.json(user)
   } catch {

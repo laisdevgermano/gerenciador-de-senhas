@@ -12,7 +12,7 @@ import prisma from '@/lib/prisma'
 import { verifyAuth, unauthorized } from '@/lib/auth'
 
 export async function GET(request) {
-  const auth = verifyAuth(request)
+  const auth = await verifyAuth(request)
   if (!auth || auth.role !== 'admin') return unauthorized()
   try {
     const users = await prisma.user.findMany({ orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] })
@@ -23,7 +23,7 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  const auth = verifyAuth(request)
+  const auth = await verifyAuth(request)
   if (!auth || auth.role !== 'admin') return unauthorized()
 
   try {
@@ -39,7 +39,7 @@ export async function POST(request) {
 }
 
 export async function PUT(request) {
-  const auth = verifyAuth(request)
+  const auth = await verifyAuth(request)
   if (!auth || auth.role !== 'admin') return unauthorized()
 
   try {

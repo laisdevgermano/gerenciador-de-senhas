@@ -13,7 +13,7 @@ import prisma from '@/lib/prisma'
 import { verifyAuth, unauthorized } from '@/lib/auth'
 
 export async function GET(request) {
-  const auth = verifyAuth(request)
+  const auth = await verifyAuth(request)
   if (!auth) return unauthorized()
   try {
     const { searchParams } = new URL(request.url)
@@ -63,7 +63,7 @@ export async function GET(request) {
 
 // Cria uma nova pasta com os dados fornecidos (name, parentId, color)
 export async function POST(request) {
-  const auth = verifyAuth(request)
+  const auth = await verifyAuth(request)
   if (!auth) return unauthorized()
   try {
     const data = await request.json()
@@ -77,7 +77,7 @@ export async function POST(request) {
 // Reordena pastas via drag-and-drop
 // Recebe { order: [{ id, sortOrder }] } e atualiza em lote
 export async function PUT(request) {
-  const auth = verifyAuth(request)
+  const auth = await verifyAuth(request)
   if (!auth) return unauthorized()
   try {
     const { order } = await request.json()
