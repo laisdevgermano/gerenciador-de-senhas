@@ -1,7 +1,7 @@
 // ============================================================
 // LoginScreen — autenticação em duas etapas
 // ============================================================
-// 1. Informa o email → 2. Informa a frase secreta
+// 1. Informa o email → 2. Informa a senha
 // Faz POST /api/auth/login, salva token + user no localStorage
 // e chama onLogin(userData) em caso de sucesso.
 // ============================================================
@@ -33,7 +33,7 @@ export default function LoginScreen({ onLogin }) {
   const handlePassphraseSubmit = async (e) => {
     e.preventDefault()
     if (!passphrase.trim()) {
-      setError('Informe sua frase secreta.')
+      setError('Informe sua senha.')
       return
     }
     setError('')
@@ -53,7 +53,7 @@ export default function LoginScreen({ onLogin }) {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'Frase secreta inválida.')
+        setError(data.error || 'Senha inválida.')
         return
       }
 
@@ -104,16 +104,16 @@ export default function LoginScreen({ onLogin }) {
               <div className="flex items-center gap-2 text-sm text-text-secondary mb-2">
                 <KeyRound size={14} />
                 <span>
-                  Frase secreta para{' '}
+                  Senha para{' '}
                   <span className="font-medium text-text-primary">{email}</span>
                 </span>
               </div>
 
               <div className="relative">
                 <Input
-                  label="Frase secreta"
+                  label="Senha"
                   type={showPassphrase ? 'text' : 'password'}
-                  placeholder="Digite sua frase secreta"
+                  placeholder="Digite sua senha"
                   value={passphrase}
                   onChange={(e) => setPassphrase(e.target.value)}
                   error={error}
