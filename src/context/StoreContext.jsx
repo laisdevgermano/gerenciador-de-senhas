@@ -25,6 +25,18 @@ async function fetchWithTimeout(url, options = {}) {
   }
 }
 
+async function handleResponse(res, path) {
+  if (!res.ok) {
+    let msg = `Erro ao ${path}`
+    try {
+      const body = await res.json()
+      msg = body.error || msg
+    } catch {}
+    throw new Error(msg)
+  }
+  return res.json()
+}
+
 // Objeto com métodos HTTP (GET, POST, PUT, DELETE) que já
 // injetam o token JWT e tratam erros básicos.
 function handleUnauthorized(res) {
@@ -43,8 +55,7 @@ const api = {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
     handleUnauthorized(res)
-    if (!res.ok) throw new Error(`Erro ao buscar ${path}`)
-    return res.json()
+    return handleResponse(res, `buscar ${path}`)
   },
   async post(path, body) {
     const token = localStorage.getItem('token')
@@ -57,8 +68,7 @@ const api = {
       body: JSON.stringify(body),
     })
     handleUnauthorized(res)
-    if (!res.ok) throw new Error(`Erro ao criar em ${path}`)
-    return res.json()
+    return handleResponse(res, `criar em ${path}`)
   },
   async put(path, body) {
     const token = localStorage.getItem('token')
@@ -71,8 +81,7 @@ const api = {
       body: JSON.stringify(body),
     })
     handleUnauthorized(res)
-    if (!res.ok) throw new Error(`Erro ao atualizar ${path}`)
-    return res.json()
+    return handleResponse(res, `atualizar ${path}`)
   },
   async delete(path) {
     const token = localStorage.getItem('token')
@@ -81,8 +90,7 @@ const api = {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
     handleUnauthorized(res)
-    if (!res.ok) throw new Error(`Erro ao excluir ${path}`)
-    return res.json()
+    return handleResponse(res, `excluir ${path}`)
   },
 }
 
@@ -149,7 +157,7 @@ export function StoreProvider({ children, currentUser }) {
       setTags(tagData)
       setUsers(userData ?? [])
     } catch (err) {
-      console.error('Erro ao carregar dados:', err)
+      console.error('StoreContext: erro ao carregar dados:', err)
     } finally {
       setLoading(false)
     }

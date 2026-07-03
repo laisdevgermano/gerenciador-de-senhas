@@ -33,7 +33,7 @@ export default function PasswordFormModal({ password, onClose, onSave, folders: 
     username: password?.username || '',
     password: password?.password || '',
     url: password?.url || '',
-    folderId: password?.folderId || '',
+    folderId: password?.folderId ?? '',
     tags: password?.tags || [],
     notes: password?.notes || '',
   })
@@ -89,8 +89,12 @@ export default function PasswordFormModal({ password, onClose, onSave, folders: 
     e.preventDefault()
     if (!validate()) return
     const sharedWithArr = Object.entries(sharedWith).map(([userId, permission]) => ({ userId, permission }))
+    const cleanData = { ...form }
+    if (!cleanData.folderId) cleanData.folderId = null
+    if (!cleanData.url) cleanData.url = null
+    if (!cleanData.notes) cleanData.notes = null
     onSave({
-      ...form,
+      ...cleanData,
       sharedWith: sharedWithArr.length ? sharedWithArr : undefined,
       updatedAt: new Date().toISOString(),
     })

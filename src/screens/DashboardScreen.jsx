@@ -76,6 +76,7 @@ export default function DashboardScreen({ onLogout }) {
   const [showShareModal, setShowShareModal] = useState(false)
   const [sharingPassword, setSharingPassword] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [error, setError] = useState('')
 
   useEffect(() => {
     setSelectedPassword(null)
@@ -405,6 +406,12 @@ export default function DashboardScreen({ onLogout }) {
         </header>
 
         <div className="flex-1 overflow-y-auto p-4">
+          {error && (
+            <div className="mb-4 p-3 bg-danger/10 border border-danger/30 rounded-lg text-sm text-danger">
+              {error}
+              <button onClick={() => setError('')} className="ml-2 text-danger/70 hover:text-danger cursor-pointer">×</button>
+            </div>
+          )}
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <div className="w-8 h-8 border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
@@ -415,10 +422,15 @@ export default function DashboardScreen({ onLogout }) {
               folders={visibleFolders}
               password={null}
               onClose={() => setIsCreating(false)}
-              onSave={async (data) => {
-                await addPassword({ ...data, createdBy: currentUser?.id })
-                setIsCreating(false)
-              }}
+                onSave={async (data) => {
+                  try {
+                    await addPassword({ ...data, createdBy: currentUser?.id })
+                    setIsCreating(false)
+                    setError('')
+                  } catch (err) {
+                    setError(err.message || 'Erro ao criar senha')
+                  }
+                }}
             />
           ) : filteredPasswords.length === 0 ? (
             <EmptyState
@@ -445,9 +457,14 @@ export default function DashboardScreen({ onLogout }) {
                   setEditingPassword(null)
                 }}
                 onSave={async (data) => {
-                  await updatePassword(editingPassword.id, data)
-                  setIsEditing(false)
-                  setEditingPassword(null)
+                  try {
+                    await updatePassword(editingPassword.id, data)
+                    setIsEditing(false)
+                    setEditingPassword(null)
+                    setError('')
+                  } catch (err) {
+                    setError(err.message || 'Erro ao atualizar senha')
+                  }
                 }}
               />
             ) : (
@@ -488,10 +505,15 @@ export default function DashboardScreen({ onLogout }) {
             setShowShareModal(false)
             setSharingPassword(null)
           }}
-          onShare={(sharedWith) => {
-            updatePassword(sharingPassword.id, { sharedWith })
-            setShowShareModal(false)
-            setSharingPassword(null)
+          onShare={async (sharedWith) => {
+            try {
+              await updatePassword(sharingPassword.id, { sharedWith })
+              setShowShareModal(false)
+              setSharingPassword(null)
+              setError('')
+            } catch (err) {
+              setError(err.message || 'Erro ao compartilhar senha')
+            }
           }}
         />
       )}
