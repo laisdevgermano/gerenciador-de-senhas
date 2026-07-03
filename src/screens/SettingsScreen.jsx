@@ -2,7 +2,7 @@
 // SettingsScreen — configurações do sistema
 // ============================================================
 // Abas:
-//   - Meu Perfil: editar nome, alterar frase secreta
+//   - Meu Perfil: editar nome, alterar senha
 //   - Importar: upload JSON em lote (com preview e validação)
 //   - Auditoria: histórico de ações (admin apenas)
 // ============================================================
@@ -93,11 +93,11 @@ function ProfileSettings({ user }) {
   const handleChangePassphrase = async () => {
     setPassError('')
     if (!newPassphrase.trim()) {
-      setPassError('Informe a nova frase secreta.')
+      setPassError('Informe a nova senha.')
       return
     }
     if (newPassphrase.length < 6) {
-      setPassError('A frase secreta deve ter pelo menos 6 caracteres.')
+      setPassError('A senha deve ter pelo menos 6 caracteres.')
       return
     }
     if (newPassphrase !== confirmPassphrase) {
@@ -112,7 +112,7 @@ function ProfileSettings({ user }) {
       setConfirmPassphrase('')
       setTimeout(() => setPassSaved(false), 2000)
     } catch {
-      setPassError('Erro ao alterar a frase secreta.')
+      setPassError('Erro ao alterar a senha.')
     } finally {
       setSavingPass(false)
     }
@@ -151,15 +151,15 @@ function ProfileSettings({ user }) {
       <div className="bg-surface rounded-xl border border-border p-6 shadow-sm space-y-4">
         <div className="flex items-center gap-2 mb-1">
           <Key size={16} className="text-brand" />
-          <h4 className="text-sm font-semibold text-text-primary">Alterar frase secreta</h4>
+          <h4 className="text-sm font-semibold text-text-primary">Alterar senha</h4>
         </div>
         <p className="text-xs text-text-muted -mt-2">
-          Apenas você pode alterar sua própria frase secreta.
+          Apenas você pode alterar sua própria senha.
         </p>
 
         <div className="relative">
           <Input
-            label="Nova frase secreta"
+            label="Nova senha"
             type={showNew ? 'text' : 'password'}
             placeholder="Mínimo de 6 caracteres"
             value={newPassphrase}
@@ -176,9 +176,9 @@ function ProfileSettings({ user }) {
 
         <div className="relative">
           <Input
-            label="Confirmar nova frase secreta"
+            label="Confirmar nova senha"
             type={showConfirm ? 'text' : 'password'}
-            placeholder="Repita a nova frase secreta"
+            placeholder="Repita a nova senha"
             value={confirmPassphrase}
             onChange={(e) => setConfirmPassphrase(e.target.value)}
             error={passError}
@@ -198,7 +198,7 @@ function ProfileSettings({ user }) {
             icon={passSaved ? Check : RefreshCw}
             loading={savingPass}
           >
-            {passSaved ? 'Alterada' : 'Alterar frase secreta'}
+            {passSaved ? 'Alterada' : 'Alterar senha'}
           </Button>
         </div>
       </div>
