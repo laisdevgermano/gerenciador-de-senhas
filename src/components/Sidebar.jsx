@@ -210,15 +210,13 @@ export default function Sidebar({
       <div className="flex items-center justify-between px-4 h-14 border-b border-border shrink-0">
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-brand flex items-center justify-center">
-                <Lock size={14} className="text-white" />
-              </div>
+              <img src="/logo.png" alt="G-Pass" className="w-7 h-7 object-contain" />
               <span className="font-bold text-text-primary text-sm">G-Pass</span>
             </div>
           )}
           {collapsed && (
-            <div className="w-7 h-7 rounded-lg bg-brand flex items-center justify-center mx-auto">
-              <Lock size={14} className="text-white" />
+            <div className="mx-auto">
+              <img src="/logo.png" alt="G-Pass" className="w-7 h-7 object-contain" />
             </div>
           )}
       </div>

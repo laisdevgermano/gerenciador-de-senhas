@@ -73,9 +73,7 @@ export default function LoginScreen({ onLogin }) {
       <ThemeToggle className="absolute top-4 right-4" />
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-brand flex items-center justify-center mb-4 shadow-lg shadow-brand/20">
-            <Lock size={28} className="text-white" />
-          </div>
+          <img src="/logo.png" alt="G-Pass" className="w-28 h-28 object-contain mb-4" />
           <h1 className="text-2xl font-bold text-text-primary">G-Pass</h1>
           <p className="text-sm text-text-muted mt-1">
             Gerencie suas senhas com segurança
