@@ -278,7 +278,7 @@ export default function Sidebar({
 
         {isAdmin && employees.length > 0 && !collapsed && (
           <>
-            <div className="flex items-center gap-0 mt-4">
+            <div className="flex items-center gap-0 mt-4 group">
               <button
                 onClick={() => setEmployeesExpanded((prev) => !prev)}
                 className="p-1 text-text-muted hover:text-text-primary cursor-pointer shrink-0"
@@ -303,7 +303,7 @@ export default function Sidebar({
                 className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
                   employeesFilter.open
                     ? 'text-brand bg-brand-light'
-                    : 'text-text-muted hover:text-text-primary hover:bg-surface-tertiary'
+                    : 'text-text-muted hover:text-text-primary hover:bg-surface-tertiary opacity-0 group-hover:opacity-100'
                 }`}
                     >
                       <Filter size={14} />
@@ -405,7 +405,7 @@ export default function Sidebar({
             ) : (
               <>
                 {isAdmin ? (
-                  <div className="flex items-center gap-0 mt-4">
+                  <div className="flex items-center gap-0 mt-4 group">
                     <button
                       onClick={() => setFoldersExpanded((prev) => !prev)}
                       className="p-1 text-text-muted hover:text-text-primary cursor-pointer shrink-0"
@@ -428,7 +428,7 @@ export default function Sidebar({
                       className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
                         foldersFilter.open
                           ? 'text-brand bg-brand-light'
-                          : 'text-text-muted hover:text-text-primary hover:bg-surface-tertiary'
+                          : 'text-text-muted hover:text-text-primary hover:bg-surface-tertiary opacity-0 group-hover:opacity-100'
                       }`}
                     >
                       <Filter size={14} />
@@ -532,7 +532,7 @@ export default function Sidebar({
             ) : (
               <>
                 {isAdmin ? (
-                  <div className="flex items-center gap-0 mt-4">
+                  <div className="flex items-center gap-0 mt-4 group">
                     <button
                       onClick={() => setTagsExpanded((prev) => !prev)}
                       className="p-1 text-text-muted hover:text-text-primary cursor-pointer shrink-0"
@@ -555,7 +555,7 @@ export default function Sidebar({
                       className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
                         tagsFilter.open
                           ? 'text-brand bg-brand-light'
-                          : 'text-text-muted hover:text-text-primary hover:bg-surface-tertiary'
+                          : 'text-text-muted hover:text-text-primary hover:bg-surface-tertiary opacity-0 group-hover:opacity-100'
                       }`}
                     >
                       <Filter size={14} />

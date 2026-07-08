@@ -14,7 +14,7 @@
 // ============================================================
 
 import { useState, useRef, useEffect } from 'react'
-import { Filter, GripVertical, Search } from 'lucide-react'
+import { Filter, GripVertical } from 'lucide-react'
 
 export default function Table({
   columns,
@@ -27,10 +27,8 @@ export default function Table({
   onReorder,
   activeColumnFilter = null,
   columnSort = { key: null, order: 'asc' },
-  columnQueries = {},
   onColumnFilterToggle,
   onColumnSort,
-  onColumnQuery,
 }) {
   const filterRef = useRef(null)
   const toggleRef = useRef(onColumnFilterToggle)
@@ -133,11 +131,10 @@ export default function Table({
             {columns.map((col) => {
               const isActive = activeColumnFilter === col.key
               const isSorted = columnSort.key === col.key
-              const hasQuery = columnQueries[col.key]
               return (
                 <th
                   key={col.key}
-                  className="text-left text-xs font-semibold text-text-muted uppercase tracking-wider px-4 py-3 relative group"
+                  className="text-left text-xs font-semibold text-text-muted uppercase tracking-wider px-4 py-3 relative"
                   style={col.width ? { width: col.width } : undefined}
                 >
                   <div className="flex items-center gap-1.5">
@@ -146,9 +143,9 @@ export default function Table({
                       <button
                         onClick={(e) => { e.stopPropagation(); onColumnFilterToggle?.(col.key) }}
                         className={`p-0.5 rounded transition-colors cursor-pointer shrink-0 ${
-                          isActive || isSorted || hasQuery
+                          isActive || isSorted
                             ? 'text-brand'
-                            : 'text-text-muted hover:text-text-primary opacity-0 group-hover:opacity-100'
+                            : 'text-text-muted hover:text-text-primary'
                         }`}
                       >
                         <Filter size={12} />
@@ -182,16 +179,6 @@ export default function Table({
                         >
                           Z-A
                         </button>
-                      </div>
-                      <div className="relative">
-                        <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-muted" />
-                        <input
-                          type="text"
-                          placeholder="Pesquisar..."
-                          value={columnQueries[col.key] || ''}
-                          onChange={(e) => onColumnQuery?.(col.key, e.target.value)}
-                          className="h-7 w-full rounded-md border border-border bg-surface pl-6 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-brand/40"
-                        />
                       </div>
                     </div>
                   )}

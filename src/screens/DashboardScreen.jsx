@@ -80,7 +80,6 @@ export default function DashboardScreen({ onLogout }) {
 
   const [activeColumnFilter, setActiveColumnFilter] = useState(null)
   const [columnSort, setColumnSort] = useState({ key: null, order: 'asc' })
-  const [columnQueries, setColumnQueries] = useState({})
 
   useEffect(() => {
     setSelectedPassword(null)
@@ -89,7 +88,6 @@ export default function DashboardScreen({ onLogout }) {
     setEditingPassword(null)
     setActiveColumnFilter(null)
     setColumnSort({ key: null, order: 'asc' })
-    setColumnQueries({})
   }, [selectedFilter])
 
   const isAdmin = currentUser?.role === 'admin'
@@ -122,26 +120,6 @@ export default function DashboardScreen({ onLogout }) {
       )
     }
 
-    const cq = columnQueries
-    if (cq.name) {
-      const q = cq.name.toLowerCase()
-      result = result.filter((p) => p.name.toLowerCase().includes(q))
-    }
-    if (cq.sharedWith) {
-      const q = cq.sharedWith.toLowerCase()
-      result = result.filter((p) =>
-        (p.sharedWith || []).some((sa) => {
-          const id = sa.userId || sa
-          const name = sa.user?.name || getUserById(id)?.name || ''
-          return name.toLowerCase().includes(q)
-        })
-      )
-    }
-    if (cq.url) {
-      const q = cq.url.toLowerCase()
-      result = result.filter((p) => p.url && p.url.toLowerCase().includes(q))
-    }
-
     if (columnSort.key) {
       const { key, order } = columnSort
       result = [...result].sort((a, b) => {
@@ -172,7 +150,7 @@ export default function DashboardScreen({ onLogout }) {
     }
 
     return result
-  }, [passwords, selectedFilter, searchQuery, columnSort, columnQueries, getUserById])
+  }, [passwords, selectedFilter, searchQuery, columnSort, getUserById])
 
   const visibleFolders = useMemo(() => {
     if (!currentUser || isAdmin) return folders
@@ -553,14 +531,10 @@ export default function DashboardScreen({ onLogout }) {
                 onReorder={reorderPasswords}
                 activeColumnFilter={activeColumnFilter}
                 columnSort={columnSort}
-                columnQueries={columnQueries}
                 onColumnFilterToggle={(key) =>
                   setActiveColumnFilter((prev) => (prev === key ? null : key))
                 }
                 onColumnSort={(key, order) => setColumnSort({ key, order })}
-                onColumnQuery={(key, query) =>
-                  setColumnQueries((prev) => ({ ...prev, [key]: query }))
-                }
               />
             </div>
           )}
