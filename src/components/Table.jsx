@@ -137,7 +137,7 @@ export default function Table({
               return (
                 <th
                   key={col.key}
-                  className="text-left text-xs font-semibold text-text-muted uppercase tracking-wider px-4 py-3 relative"
+                  className="text-left text-xs font-semibold text-text-muted uppercase tracking-wider px-4 py-3 relative group"
                   style={col.width ? { width: col.width } : undefined}
                 >
                   <div className="flex items-center gap-1.5">
@@ -148,7 +148,7 @@ export default function Table({
                         className={`p-0.5 rounded transition-colors cursor-pointer shrink-0 ${
                           isActive || isSorted || hasQuery
                             ? 'text-brand'
-                            : 'text-text-muted hover:text-text-primary'
+                            : 'text-text-muted hover:text-text-primary opacity-0 group-hover:opacity-100'
                         }`}
                       >
                         <Filter size={12} />
