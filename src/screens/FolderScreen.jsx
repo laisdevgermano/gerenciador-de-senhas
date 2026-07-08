@@ -1,8 +1,10 @@
 // ============================================================
-// FolderScreen — gerenciamento de pastas (admin)
+// FolderScreen — gerenciamento de Clientes (admin)
 // ============================================================
-// CRUD de pastas com suporte a subpastas (parentId).
+// CRUD de clientes com suporte a subpastas (parentId).
 // Exibe árvore expansível com drag-and-drop para reordenação.
+// Cada cliente raiz é uma pasta principal; dentro dela podem
+// existir subpastas para organizar as senhas do cliente.
 // ============================================================
 
 import { useState, useRef } from 'react'
@@ -61,8 +63,8 @@ export default function FolderScreen() {
     <div className="p-6 max-w-3xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-semibold text-text-primary">Pastas</h2>
-          <p className="text-sm text-text-muted">Organize suas senhas em pastas</p>
+          <h2 className="text-lg font-semibold text-text-primary">Clientes</h2>
+          <p className="text-sm text-text-muted">Organize as senhas por cliente</p>
         </div>
         <Button
           icon={Plus}
@@ -71,22 +73,22 @@ export default function FolderScreen() {
             setShowModal(true)
           }}
         >
-          Nova pasta
+          Novo Cliente
         </Button>
       </div>
 
       {rootFolders.length === 0 ? (
         <EmptyState
           icon={FolderClosed}
-          title="Nenhuma pasta"
-          description="Crie pastas para organizar suas senhas."
+          title="Nenhum Cliente"
+          description="Crie clientes para organizar as senhas."
           action={
             <Button
               size="sm"
               icon={FolderPlus}
               onClick={() => setShowModal(true)}
             >
-              Criar pasta
+              Criar Cliente
             </Button>
           }
         />
@@ -285,8 +287,9 @@ function FolderFormModal({ folder, folders, onClose, onSave }) {
     <Modal
       open
       onClose={onClose}
-      title={folder ? 'Editar pasta' : 'Nova pasta'}
+      title={folder ? 'Editar Cliente' : 'Novo Cliente'}
       size="sm"
+      disableOverlayClose
       actions={
         <>
           <Button variant="danger" onClick={onClose}>Cancelar</Button>
@@ -296,8 +299,8 @@ function FolderFormModal({ folder, folders, onClose, onSave }) {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
-          label="Nome da pasta"
-          placeholder="Ex: Infraestrutura"
+          label="Nome do Cliente"
+          placeholder="Ex: Empresa XYZ"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -323,7 +326,7 @@ function FolderFormModal({ folder, folders, onClose, onSave }) {
 
         <div>
           <label className="text-sm font-medium text-text-primary block mb-1.5">
-            Pasta pai (opcional)
+            Cliente pai (opcional)
           </label>
           <select
             value={parentId}

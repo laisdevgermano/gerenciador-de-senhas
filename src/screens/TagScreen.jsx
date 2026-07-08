@@ -139,10 +139,15 @@ function TagFormModal({ tag, onClose, onSave }) {
   const [name, setName] = useState(tag?.name || '')
   const [color, setColor] = useState(tag?.color || '#0c11cf')
 
+  const capitalize = (str) => {
+    if (!str) return ''
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!name.trim()) return
-    onSave({ name: name.trim(), color })
+    onSave({ name: capitalize(name.trim()), color })
   }
 
   return (
@@ -151,6 +156,7 @@ function TagFormModal({ tag, onClose, onSave }) {
       onClose={onClose}
       title={tag ? 'Editar tag' : 'Nova tag'}
       size="sm"
+      disableOverlayClose
       actions={
         <>
           <Button variant="danger" onClick={onClose}>Cancelar</Button>

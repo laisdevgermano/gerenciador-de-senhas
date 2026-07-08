@@ -90,6 +90,8 @@ export default function PasswordFormModal({ password, onClose, onSave, folders: 
     if (!validate()) return
     const sharedWithArr = Object.entries(sharedWith).map(([userId, permission]) => ({ userId, permission }))
     const cleanData = { ...form }
+    cleanData.name = cleanData.name.charAt(0).toUpperCase() + cleanData.name.slice(1).toLowerCase()
+    cleanData.username = cleanData.username.toLowerCase()
     if (!cleanData.folderId) cleanData.folderId = null
     if (!cleanData.url) cleanData.url = null
     if (!cleanData.notes) cleanData.notes = null
@@ -168,7 +170,7 @@ export default function PasswordFormModal({ password, onClose, onSave, folders: 
 
       <div>
         <label className="text-sm font-medium text-text-primary block mb-2">
-          Pasta
+          Cliente / Pasta
         </label>
         <select
           value={form.folderId}

@@ -78,11 +78,18 @@ export default function DashboardScreen({ onLogout }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [error, setError] = useState('')
 
+  const [activeColumnFilter, setActiveColumnFilter] = useState(null)
+  const [columnSort, setColumnSort] = useState({ key: null, order: 'asc' })
+  const [columnQueries, setColumnQueries] = useState({})
+
   useEffect(() => {
     setSelectedPassword(null)
     setIsEditing(false)
     setIsCreating(false)
     setEditingPassword(null)
+    setActiveColumnFilter(null)
+    setColumnSort({ key: null, order: 'asc' })
+    setColumnQueries({})
   }, [selectedFilter])
 
   const isAdmin = currentUser?.role === 'admin'
@@ -115,8 +122,57 @@ export default function DashboardScreen({ onLogout }) {
       )
     }
 
+    const cq = columnQueries
+    if (cq.name) {
+      const q = cq.name.toLowerCase()
+      result = result.filter((p) => p.name.toLowerCase().includes(q))
+    }
+    if (cq.sharedWith) {
+      const q = cq.sharedWith.toLowerCase()
+      result = result.filter((p) =>
+        (p.sharedWith || []).some((sa) => {
+          const id = sa.userId || sa
+          const name = sa.user?.name || getUserById(id)?.name || ''
+          return name.toLowerCase().includes(q)
+        })
+      )
+    }
+    if (cq.url) {
+      const q = cq.url.toLowerCase()
+      result = result.filter((p) => p.url && p.url.toLowerCase().includes(q))
+    }
+
+    if (columnSort.key) {
+      const { key, order } = columnSort
+      result = [...result].sort((a, b) => {
+        let valA, valB
+        if (key === 'name') {
+          valA = a.name.toLowerCase()
+          valB = b.name.toLowerCase()
+        } else if (key === 'url') {
+          valA = (a.url || '').toLowerCase()
+          valB = (b.url || '').toLowerCase()
+        } else if (key === 'updatedAt') {
+          valA = new Date(a.updatedAt || 0).getTime()
+          valB = new Date(b.updatedAt || 0).getTime()
+        } else if (key === 'sharedWith') {
+          valA = ((a.sharedWith || []).map((sa) => {
+            const id = sa.userId || sa
+            return sa.user?.name || getUserById(id)?.name || ''
+          }).join(', ') || '').toLowerCase()
+          valB = ((b.sharedWith || []).map((sa) => {
+            const id = sa.userId || sa
+            return sa.user?.name || getUserById(id)?.name || ''
+          }).join(', ') || '').toLowerCase()
+        }
+        if (valA < valB) return order === 'asc' ? -1 : 1
+        if (valA > valB) return order === 'asc' ? 1 : -1
+        return 0
+      })
+    }
+
     return result
-  }, [passwords, selectedFilter, searchQuery])
+  }, [passwords, selectedFilter, searchQuery, columnSort, columnQueries, getUserById])
 
   const visibleFolders = useMemo(() => {
     if (!currentUser || isAdmin) return folders
@@ -183,7 +239,7 @@ export default function DashboardScreen({ onLogout }) {
     if (isCreating) return 'Nova senha'
     if (selectedFilter === 'all') return 'Todas as senhas'
     if (selectedFilter.startsWith('folder:'))
-      return getFolderById(selectedFilter.split(':')[1])?.name || 'Pasta'
+      return getFolderById(selectedFilter.split(':')[1])?.name || 'Cliente'
     if (selectedFilter.startsWith('tag:'))
       return getTagById(selectedFilter.split(':')[1])?.name || 'Tag'
     if (selectedFilter.startsWith('employee:')) {
@@ -197,7 +253,7 @@ export default function DashboardScreen({ onLogout }) {
     {
       key: 'name',
       label: 'Nome',
-      sortable: true,
+      filterable: true,
       render: (row) => (
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-brand-light flex items-center justify-center shrink-0">
@@ -217,6 +273,7 @@ export default function DashboardScreen({ onLogout }) {
     {
       key: 'sharedWith',
       label: 'Funcionário',
+      filterable: true,
       render: (row) => {
         const names = (row.sharedWith || [])
           .map((sa) => {
@@ -237,6 +294,7 @@ export default function DashboardScreen({ onLogout }) {
     {
       key: 'url',
       label: 'URL',
+      filterable: true,
       render: (row) =>
         row.url ? (
           <div className="flex items-center gap-1.5">
@@ -250,6 +308,7 @@ export default function DashboardScreen({ onLogout }) {
     {
       key: 'updatedAt',
       label: 'Modificado em',
+      filterable: true,
       render: (row) => (
         <div className="flex items-center gap-1.5">
           <Clock size={14} className="text-text-muted shrink-0" />
@@ -492,6 +551,16 @@ export default function DashboardScreen({ onLogout }) {
                 onRowClick={(row) => setSelectedPassword(row)}
                 emptyMessage="Nenhum recurso encontrado."
                 onReorder={reorderPasswords}
+                activeColumnFilter={activeColumnFilter}
+                columnSort={columnSort}
+                columnQueries={columnQueries}
+                onColumnFilterToggle={(key) =>
+                  setActiveColumnFilter((prev) => (prev === key ? null : key))
+                }
+                onColumnSort={(key, order) => setColumnSort({ key, order })}
+                onColumnQuery={(key, query) =>
+                  setColumnQueries((prev) => ({ ...prev, [key]: query }))
+                }
               />
             </div>
           )}

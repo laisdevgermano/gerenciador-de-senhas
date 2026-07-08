@@ -3,7 +3,7 @@
 // ============================================================
 // Exibe:
 //   - Itens fixos: "Todas as senhas", "Funcionários" (admin)
-//   - Pastas (árvore expansível com drag-and-drop)
+//   - Clientes (árvore expansível com drag-and-drop)
 //   - Tags (reordenáveis via drag-and-drop)
 //   - Funcionários (reordenáveis via drag-and-drop, admin)
 //   - Configurações, Sair, avatar do usuário, toggle recolher
@@ -27,6 +27,8 @@ import {
   ChevronRight,
   User,
   GripVertical,
+  Filter,
+  Search,
 } from 'lucide-react'
 import Badge from './Badge'
 import Avatar from './Avatar'
@@ -90,13 +92,13 @@ export default function Sidebar({
     let items
     switch (section) {
       case 'folders':
-        items = [...rootFolders]
+        items = foldersFilter.open ? filteredSorted(rootFolders, 'folders') : [...rootFolders]
         break
       case 'tags':
-        items = [...tags]
+        items = tagsFilter.open ? filteredSorted(tags, 'tags') : [...tags]
         break
       case 'employees':
-        items = [...employees]
+        items = employeesFilter.open ? filteredSorted(employees, 'employees') : [...employees]
         break
       default:
         return
@@ -136,6 +138,36 @@ export default function Sidebar({
   const [tagsExpanded, setTagsExpanded] = useState(true)
   const [foldersExpanded, setFoldersExpanded] = useState(true)
   const [employeesExpanded, setEmployeesExpanded] = useState(true)
+
+  const [foldersFilter, setFoldersFilter] = useState({ open: false, query: '', order: 'asc' })
+  const [tagsFilter, setTagsFilter] = useState({ open: false, query: '', order: 'asc' })
+  const [employeesFilter, setEmployeesFilter] = useState({ open: false, query: '', order: 'asc' })
+
+  const toggleFilter = (section) => {
+    const setter = section === 'folders' ? setFoldersFilter : section === 'tags' ? setTagsFilter : setEmployeesFilter
+    setter((prev) => ({ ...prev, open: !prev.open, query: '' }))
+  }
+
+  const setSortOrder = (section, order) => {
+    const setter = section === 'folders' ? setFoldersFilter : section === 'tags' ? setTagsFilter : setEmployeesFilter
+    setter((prev) => ({ ...prev, order }))
+  }
+
+  const filteredSorted = (items, section) => {
+    const filter = section === 'folders' ? foldersFilter : section === 'tags' ? tagsFilter : employeesFilter
+    if (!filter.open) return items
+    let result = items
+    if (filter.query) {
+      const q = filter.query.toLowerCase()
+      result = result.filter((item) => item.name.toLowerCase().includes(q))
+    }
+    if (filter.order === 'asc') {
+      result = [...result].sort((a, b) => a.name.localeCompare(b.name))
+    } else {
+      result = [...result].sort((a, b) => b.name.localeCompare(a.name))
+    }
+    return result
+  }
 
   const isAdmin = currentUser?.role === 'admin'
 
@@ -204,7 +236,7 @@ export default function Sidebar({
   return (
     <aside
       className={`h-full bg-surface border-r border-border flex flex-col transition-all duration-300 ${
-        collapsed ? 'w-16' : 'w-64'
+        collapsed ? 'w-16' : 'w-80'
       }`}
     >
       <div className="flex items-center justify-between px-4 h-14 border-b border-border shrink-0">
@@ -266,8 +298,54 @@ export default function Sidebar({
                   Funcionários ({employees.length})
                 </span>
               </button>
+              <button
+                onClick={() => toggleFilter('employees')}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                  employeesFilter.open
+                    ? 'text-brand bg-brand-light'
+                    : 'text-text-muted hover:text-text-primary hover:bg-surface-tertiary'
+                }`}
+                    >
+                      <Filter size={14} />
+                    </button>
             </div>
-            {employeesExpanded && employees.map((emp, idx) => {
+            {employeesFilter.open && (
+              <div className="px-2 mt-1 mb-1 space-y-1">
+                <div className="relative">
+                  <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <input
+                    type="text"
+                    placeholder="Pesquisar..."
+                    value={employeesFilter.query}
+                    onChange={(e) => setEmployeesFilter((prev) => ({ ...prev, query: e.target.value }))}
+                    className="h-7 w-full rounded-md border border-border bg-surface pl-7 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-brand/40"
+                  />
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setSortOrder('employees', 'asc')}
+                    className={`flex-1 h-6 rounded text-xs font-medium transition-colors cursor-pointer ${
+                      employeesFilter.order === 'asc'
+                        ? 'bg-brand text-white'
+                        : 'bg-surface-tertiary text-text-secondary hover:bg-surface-active'
+                    }`}
+                  >
+                    A-Z
+                  </button>
+                  <button
+                    onClick={() => setSortOrder('employees', 'desc')}
+                    className={`flex-1 h-6 rounded text-xs font-medium transition-colors cursor-pointer ${
+                      employeesFilter.order === 'desc'
+                        ? 'bg-brand text-white'
+                        : 'bg-surface-tertiary text-text-secondary hover:bg-surface-active'
+                    }`}
+                  >
+                    Z-A
+                  </button>
+                </div>
+              </div>
+            )}
+            {employeesExpanded && filteredSorted(employees, 'employees').map((emp, idx) => {
               const isActive = selectedFilter === `employee:${emp.id}`
               const isDragOver = dragOverIndex === idx && dragIndex !== idx && dragSection === 'employees'
               return (
@@ -319,7 +397,7 @@ export default function Sidebar({
                       ? 'bg-surface-active'
                       : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
                   }`}
-                  title="Pastas"
+                  title="Clientes"
                 >
                   <FolderClosed size={18} className="shrink-0" />
                 </button>
@@ -343,7 +421,17 @@ export default function Sidebar({
                       }`}
                     >
                       <FolderClosed size={18} className={`shrink-0 ${selectedFilter === 'manage-folders' ? 'text-brand' : ''}`} />
-                      {!collapsed && <span className="truncate font-semibold text-xs uppercase tracking-wider text-text-muted">Pastas</span>}
+                      {!collapsed && <span className="truncate font-semibold text-xs uppercase tracking-wider text-text-muted">Clientes</span>}
+                    </button>
+                    <button
+                      onClick={() => toggleFilter('folders')}
+                      className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                        foldersFilter.open
+                          ? 'text-brand bg-brand-light'
+                          : 'text-text-muted hover:text-text-primary hover:bg-surface-tertiary'
+                      }`}
+                    >
+                      <Filter size={14} />
                     </button>
                   </div>
                 ) : (
@@ -355,11 +443,47 @@ export default function Sidebar({
                       {foldersExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                     </button>
                     <p className="px-3 text-xs font-semibold text-text-muted uppercase tracking-wider">
-                      Pastas
+                      Clientes
                     </p>
                   </div>
                 )}
-                {foldersExpanded && rootFolders.map((folder, idx) => {
+                {foldersFilter.open && (
+                  <div className="px-2 mt-1 mb-1 space-y-1">
+                    <div className="relative">
+                      <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                      <input
+                        type="text"
+                        placeholder="Pesquisar..."
+                        value={foldersFilter.query}
+                        onChange={(e) => setFoldersFilter((prev) => ({ ...prev, query: e.target.value }))}
+                        className="h-7 w-full rounded-md border border-border bg-surface pl-7 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-brand/40"
+                      />
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setSortOrder('folders', 'asc')}
+                        className={`flex-1 h-6 rounded text-xs font-medium transition-colors cursor-pointer ${
+                          foldersFilter.order === 'asc'
+                            ? 'bg-brand text-white'
+                            : 'bg-surface-tertiary text-text-secondary hover:bg-surface-active'
+                        }`}
+                      >
+                        A-Z
+                      </button>
+                      <button
+                        onClick={() => setSortOrder('folders', 'desc')}
+                        className={`flex-1 h-6 rounded text-xs font-medium transition-colors cursor-pointer ${
+                          foldersFilter.order === 'desc'
+                            ? 'bg-brand text-white'
+                            : 'bg-surface-tertiary text-text-secondary hover:bg-surface-active'
+                        }`}
+                      >
+                        Z-A
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {foldersExpanded && filteredSorted(rootFolders, 'folders').map((folder, idx) => {
                   const isDragOver = dragOverIndex === idx && dragIndex !== idx && dragSection === 'folders'
                   return (
                     <div
@@ -426,6 +550,16 @@ export default function Sidebar({
                       <Tags size={18} className={`shrink-0 ${selectedFilter === 'manage-tags' ? 'text-brand' : ''}`} />
                       {!collapsed && <span className="truncate font-semibold text-xs uppercase tracking-wider text-text-muted">Tags</span>}
                     </button>
+                    <button
+                      onClick={() => toggleFilter('tags')}
+                      className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                        tagsFilter.open
+                          ? 'text-brand bg-brand-light'
+                          : 'text-text-muted hover:text-text-primary hover:bg-surface-tertiary'
+                      }`}
+                    >
+                      <Filter size={14} />
+                    </button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-0 mt-4">
@@ -440,7 +574,43 @@ export default function Sidebar({
                     </p>
                   </div>
                 )}
-                {tagsExpanded && tags.map((tag, idx) => {
+                {tagsFilter.open && (
+                  <div className="px-2 mt-1 mb-1 space-y-1">
+                    <div className="relative">
+                      <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                      <input
+                        type="text"
+                        placeholder="Pesquisar..."
+                        value={tagsFilter.query}
+                        onChange={(e) => setTagsFilter((prev) => ({ ...prev, query: e.target.value }))}
+                        className="h-7 w-full rounded-md border border-border bg-surface pl-7 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-brand/40"
+                      />
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setSortOrder('tags', 'asc')}
+                        className={`flex-1 h-6 rounded text-xs font-medium transition-colors cursor-pointer ${
+                          tagsFilter.order === 'asc'
+                            ? 'bg-brand text-white'
+                            : 'bg-surface-tertiary text-text-secondary hover:bg-surface-active'
+                        }`}
+                      >
+                        A-Z
+                      </button>
+                      <button
+                        onClick={() => setSortOrder('tags', 'desc')}
+                        className={`flex-1 h-6 rounded text-xs font-medium transition-colors cursor-pointer ${
+                          tagsFilter.order === 'desc'
+                            ? 'bg-brand text-white'
+                            : 'bg-surface-tertiary text-text-secondary hover:bg-surface-active'
+                        }`}
+                      >
+                        Z-A
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {tagsExpanded && filteredSorted(tags, 'tags').map((tag, idx) => {
                   const isActive = selectedFilter === `tag:${tag.id}`
                   const isDragOver = dragOverIndex === idx && dragIndex !== idx && dragSection === 'tags'
                   return (

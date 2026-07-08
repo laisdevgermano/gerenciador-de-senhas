@@ -13,8 +13,8 @@
 // (opacity-0 group-hover:opacity-100).
 // ============================================================
 
-import { useState, useRef } from 'react'
-import { ChevronsUpDown, GripVertical } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Filter, GripVertical, Search } from 'lucide-react'
 
 export default function Table({
   columns,
@@ -25,7 +25,34 @@ export default function Table({
   emptyMessage = 'Nenhum registro encontrado.',
   className = '',
   onReorder,
+  activeColumnFilter = null,
+  columnSort = { key: null, order: 'asc' },
+  columnQueries = {},
+  onColumnFilterToggle,
+  onColumnSort,
+  onColumnQuery,
 }) {
+  const filterRef = useRef(null)
+  const toggleRef = useRef(onColumnFilterToggle)
+  toggleRef.current = onColumnFilterToggle
+  const activeRef = useRef(activeColumnFilter)
+  activeRef.current = activeColumnFilter
+
+  useEffect(() => {
+    if (!activeColumnFilter) return
+    const handleClickOutside = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) {
+        toggleRef.current?.(activeRef.current)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [activeColumnFilter])
+
+  const handleSortClick = (key, order) => {
+    onColumnSort?.(key, order)
+    onColumnFilterToggle?.(key)
+  }
   const [dragIndex, setDragIndex] = useState(null)
   const [dragOverIndex, setDragOverIndex] = useState(null)
   const dragNode = useRef(null)
@@ -103,18 +130,74 @@ export default function Table({
         <thead>
           <tr className="border-b border-border">
             {onReorder && <th className="w-8 px-2 py-3" />}
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                className="text-left text-xs font-semibold text-text-muted uppercase tracking-wider px-4 py-3"
-                style={col.width ? { width: col.width } : undefined}
-              >
-                <div className="flex items-center gap-1.5">
-                  {col.label}
-                  {col.sortable && <ChevronsUpDown size={14} className="text-text-muted" />}
-                </div>
-              </th>
-            ))}
+            {columns.map((col) => {
+              const isActive = activeColumnFilter === col.key
+              const isSorted = columnSort.key === col.key
+              const hasQuery = columnQueries[col.key]
+              return (
+                <th
+                  key={col.key}
+                  className="text-left text-xs font-semibold text-text-muted uppercase tracking-wider px-4 py-3 relative"
+                  style={col.width ? { width: col.width } : undefined}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate">{col.label}</span>
+                    {col.filterable && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onColumnFilterToggle?.(col.key) }}
+                        className={`p-0.5 rounded transition-colors cursor-pointer shrink-0 ${
+                          isActive || isSorted || hasQuery
+                            ? 'text-brand'
+                            : 'text-text-muted hover:text-text-primary'
+                        }`}
+                      >
+                        <Filter size={12} />
+                      </button>
+                    )}
+                  </div>
+                  {isActive && col.filterable && (
+                    <div
+                      ref={filterRef}
+                      className="absolute top-full left-0 mt-1 w-48 z-50 bg-surface rounded-lg border border-border shadow-xl p-2 space-y-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleSortClick(col.key, 'asc')}
+                          className={`flex-1 h-6 rounded text-xs font-medium transition-colors cursor-pointer ${
+                            isSorted && columnSort.order === 'asc'
+                              ? 'bg-brand text-white'
+                              : 'bg-surface-tertiary text-text-secondary hover:bg-surface-active'
+                          }`}
+                        >
+                          A-Z
+                        </button>
+                        <button
+                          onClick={() => handleSortClick(col.key, 'desc')}
+                          className={`flex-1 h-6 rounded text-xs font-medium transition-colors cursor-pointer ${
+                            isSorted && columnSort.order === 'desc'
+                              ? 'bg-brand text-white'
+                              : 'bg-surface-tertiary text-text-secondary hover:bg-surface-active'
+                          }`}
+                        >
+                          Z-A
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-muted" />
+                        <input
+                          type="text"
+                          placeholder="Pesquisar..."
+                          value={columnQueries[col.key] || ''}
+                          onChange={(e) => onColumnQuery?.(col.key, e.target.value)}
+                          className="h-7 w-full rounded-md border border-border bg-surface pl-6 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-brand/40"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </th>
+              )
+            })}
           </tr>
         </thead>
         <tbody>

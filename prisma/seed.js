@@ -24,7 +24,32 @@ async function main() {
     },
   })
 
+  const clienteA = await prisma.folder.create({
+    data: { name: 'Empresa Alpha', color: '#0c11cf', sortOrder: 0 },
+  })
+
+  const clienteB = await prisma.folder.create({
+    data: { name: 'Empresa Beta', color: '#059669', sortOrder: 1 },
+  })
+
+  await prisma.folder.create({
+    data: { name: 'Infraestrutura', parentId: clienteA.id, color: '#6366f1', sortOrder: 0 },
+  })
+
+  await prisma.folder.create({
+    data: { name: 'Financeiro', parentId: clienteA.id, color: '#d97706', sortOrder: 1 },
+  })
+
+  await prisma.folder.create({
+    data: { name: 'Produção', parentId: clienteB.id, color: '#dc2626', sortOrder: 0 },
+  })
+
+  await prisma.folder.create({
+    data: { name: 'Homologação', parentId: clienteB.id, color: '#7c3aed', sortOrder: 1 },
+  })
+
   console.log('Seed concluído. Admin: caique@germano.com / senha123')
+  console.log('Clientes criados: Empresa Alpha, Empresa Beta (com subpastas)')
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect())

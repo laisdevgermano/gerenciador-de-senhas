@@ -11,6 +11,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js",
+    "db:normalize-tags": "node prisma/normalize-tags.mjs",
+    "db:normalize-passwords": "node prisma/normalize-passwords.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "postinstall": "prisma generate"
