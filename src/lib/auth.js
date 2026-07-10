@@ -1,46 +1,51 @@
-// ============================================================
-// AUTENTICAÇÃO JWT — verificação de token nas requisições
-// ============================================================
-// Usado por todas as rotas da API para proteger endpoints.
-// O token é enviado no header Authorization: Bearer <token>
-//
-// Valida a assinatura E compara o tokenVersion do token com
-// o valor atual no banco. Se a senha foi alterada depois que
-// o token foi emitido, a versão não confere → 401.
-// ============================================================
-
 import { NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import prisma from '@/lib/prisma'
 
-// Extrai e verifica o token JWT do header Authorization.
-// Retorna o payload decodificado { userId, role, tokenVersion }
-// ou null se inválido / versão desatualizada.
 export async function verifyAuth(request) {
-  const auth = request.headers.get('Authorization')
-  if (!auth?.startsWith('Bearer ')) {
-    return null
-  }
-  try {
-    const token = auth.slice(7)
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+  let token = null
 
+  const auth = request.headers.get('Authorization')
+  if (auth?.startsWith('Bearer ')) {
+    token = auth.slice(7)
+  }
+
+  if (!token) {
+    const cookies = request.headers.get('Cookie') || ''
+    const match = cookies.match(/gpass-token=([^;]+)/)
+    if (match) token = match[1]
+  }
+
+  if (!token) return null
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: { tokenVersion: true },
     })
-
-    if (!user || user.tokenVersion !== decoded.tokenVersion) {
-      return null
-    }
-
+    if (!user || user.tokenVersion !== decoded.tokenVersion) return null
     return decoded
   } catch {
     return null
   }
 }
 
-// Retorna uma resposta 401 (Não autorizado) padronizada.
 export function unauthorized() {
   return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+}
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Credentials': 'true',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+}
+
+export function corsHeaders() {
+  return { headers: CORS_HEADERS }
 }

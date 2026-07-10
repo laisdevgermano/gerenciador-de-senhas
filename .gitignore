@@ -39,3 +39,4 @@ public/uploads/*
 
 .vercel
 .opencode
+.env*

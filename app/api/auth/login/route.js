@@ -1,61 +1,69 @@
-// ============================================================
-// POST /api/auth/login — autenticação do usuário
-// ============================================================
-// Recebe email + passphrase, verifica o hash bcrypt no banco
-// e retorna um token JWT (válido por 7 dias) + dados do usuário.
-// ============================================================
-
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import prisma from '@/lib/prisma'
+import { rateLimit } from '@/lib/rateLimit'
+
+function getClientIp(request) {
+  const forwarded = request.headers.get('x-forwarded-for')
+  if (forwarded) return forwarded.split(',')[0].trim()
+  return 'unknown'
+}
 
 export async function POST(request) {
   try {
-    const { email, passphrase } = await request.json()
+    const ip = getClientIp(request)
+    const limit = rateLimit(ip, 5, 60000)
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: 'Muitas tentativas. Tente novamente em ' + limit.retryAfter + 's' },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfter) } }
+      )
+    }
 
-    // Validação básica dos campos obrigatórios
+    const { email, passphrase } = await request.json()
     if (!email || !passphrase) {
       return NextResponse.json({ error: 'Email e frase secreta são obrigatórios' }, { status: 400 })
     }
 
-    // Busca o usuário pelo email
     const user = await prisma.user.findUnique({ where: { email } })
-
-    // Verifica se existe e tem passphrase cadastrada
     if (!user || !user.passphrase) {
       return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 })
     }
 
-    // Compara a passphrase fornecida com o hash armazenado
     const valid = await bcrypt.compare(passphrase, user.passphrase)
     if (!valid) {
       return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 })
     }
 
-    // Atualiza o timestamp do último login
     await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } })
 
-    // Gera token JWT com userId, role e tokenVersion (expira em 7 dias)
     const token = jwt.sign(
       { userId: user.id, role: user.role, tokenVersion: user.tokenVersion },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '8h' }
     )
 
-    // Retorna dados do usuário (sem a passphrase) + token
-    return NextResponse.json({
+    const response = NextResponse.json({
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
         avatar: user.avatar,
-        mfaEnabled: user.mfaEnabled,
       },
-      token,
     })
-  } catch (error) {
+
+    response.cookies.set('gpass-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 8 * 60 * 60,
+    })
+
+    return response
+  } catch {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

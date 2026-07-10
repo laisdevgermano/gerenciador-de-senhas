@@ -41,8 +41,8 @@ async function handleResponse(res, path) {
 // injetam o token JWT e tratam erros básicos.
 function handleUnauthorized(res) {
   if (res.status === 401) {
-    localStorage.removeItem('token')
     localStorage.removeItem('user')
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
     window.location.reload()
     throw new Error('Sessão expirada')
   }
@@ -50,53 +50,42 @@ function handleUnauthorized(res) {
 
 const api = {
   async get(path) {
-    const token = localStorage.getItem('token')
-    const res = await fetchWithTimeout(`/api${path}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
+    const res = await fetchWithTimeout(`/api${path}`, { credentials: 'include' })
     handleUnauthorized(res)
     return handleResponse(res, `buscar ${path}`)
   },
   async post(path, body) {
-    const token = localStorage.getItem('token')
     const res = await fetchWithTimeout(`/api${path}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(body),
     })
     handleUnauthorized(res)
     return handleResponse(res, `criar em ${path}`)
   },
   async put(path, body) {
-    const token = localStorage.getItem('token')
     const res = await fetchWithTimeout(`/api${path}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(body),
     })
     handleUnauthorized(res)
-    return handleResponse(res, `atualizar ${path}`)
+    return handleResponse(res, `atualizar em ${path}`)
   },
   async delete(path) {
-    const token = localStorage.getItem('token')
     const res = await fetchWithTimeout(`/api${path}`, {
       method: 'DELETE',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: 'include',
     })
     handleUnauthorized(res)
-    return handleResponse(res, `excluir ${path}`)
+    return handleResponse(res, `excluir em ${path}`)
   },
   async upload(path, formData) {
-    const token = localStorage.getItem('token')
     const res = await fetchWithTimeout(`/api${path}`, {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: 'include',
       body: formData,
     })
     handleUnauthorized(res)
@@ -152,13 +141,7 @@ export function StoreProvider({ children, currentUser }) {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const userId = isEmployee ? currentUser?.id : null
-      const pwPath = userId ? `/passwords?userId=${userId}` : '/passwords'
-      const folderPath = userId ? `/folders?userId=${userId}` : '/folders'
-      const tagPath = userId ? `/tags?userId=${userId}` : '/tags'
-
-      // Admin carrega dados de usuários; funcionário não tem acesso
-      const promises = [api.get(pwPath), api.get(folderPath), api.get(tagPath)]
+      const promises = [api.get('/passwords'), api.get('/folders'), api.get('/tags')]
       if (!isEmployee) promises.push(api.get('/users'))
 
       const [pwData, folderData, tagData, userData] = await Promise.all(promises)

@@ -52,6 +52,18 @@ function formatFileSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function ImageThumb({ doc }) {
+  const [src, setSrc] = useState(null)
+  useEffect(() => {
+    fetch(`/api/documents/${doc.id}/view`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d) => setSrc(d.url))
+      .catch(() => {})
+  }, [doc.id])
+  if (!src) return <div className="w-full h-20 bg-surface-tertiary rounded mb-2 animate-pulse" />
+  return <img src={src} alt={doc.name} className="w-full h-20 object-cover rounded mb-2" />
+}
+
 export default function DocumentExplorer({ type = 'folder', id, inline = false }) {
   const {
     documents, folders, users, tags,
@@ -66,6 +78,7 @@ export default function DocumentExplorer({ type = 'folder', id, inline = false }
   const [previewDoc, setPreviewDoc] = useState(null)
   const [previewContent, setPreviewContent] = useState(null)
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState(null)
   const fileInputRef = useRef(null)
 
   const docs = (() => {
@@ -158,17 +171,22 @@ export default function DocumentExplorer({ type = 'folder', id, inline = false }
   const handlePreview = async (doc) => {
     setPreviewDoc(doc)
     setPreviewContent(null)
-    if (doc.mimeType === 'text/plain' || doc.mimeType === 'text/csv') {
-      setPreviewLoading(true)
-      try {
-        const res = await fetch(doc.storagePath)
-        const text = await res.text()
-        setPreviewContent(text)
-      } catch {
-        setPreviewContent('Erro ao carregar conteúdo.')
-      } finally {
-        setPreviewLoading(false)
+    setPreviewUrl(null)
+    setPreviewLoading(true)
+    try {
+      const res = await fetch(`/api/documents/${doc.id}/view`, { credentials: 'include' })
+      if (!res.ok) throw new Error('Falha ao carregar')
+      const data = await res.json()
+      if (doc.mimeType === 'text/plain' || doc.mimeType === 'text/csv') {
+        const textRes = await fetch(data.url, { credentials: 'include' })
+        setPreviewContent(await textRes.text())
+      } else {
+        setPreviewUrl(data.url)
       }
+    } catch {
+      setPreviewContent('Erro ao carregar conteúdo.')
+    } finally {
+      setPreviewLoading(false)
     }
   }
 
@@ -242,11 +260,7 @@ export default function DocumentExplorer({ type = 'folder', id, inline = false }
                   className={`relative group bg-surface-secondary rounded-lg border border-border p-3 hover:border-brand/50 transition-colors ${canPreview(doc.mimeType) && !isRenaming && !isMoving ? 'cursor-pointer' : ''}`}
                 >
                   {isImage ? (
-                    <img
-                      src={doc.storagePath}
-                      alt={doc.name}
-                      className="w-full h-20 object-cover rounded mb-2"
-                    />
+                    <ImageThumb doc={doc} />
                   ) : (
                     <div className="w-full h-20 flex items-center justify-center bg-surface-tertiary rounded mb-2">
                       <Icon size={24} className="text-text-muted" />
@@ -388,17 +402,23 @@ export default function DocumentExplorer({ type = 'folder', id, inline = false }
             </div>
 
             <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-surface-secondary rounded-b-xl">
-              {previewDoc.mimeType.startsWith('image/') && (
+              {previewLoading && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-6 h-6 border-3 border-brand/30 border-t-brand rounded-full animate-spin" />
+                </div>
+              )}
+
+              {!previewLoading && previewDoc.mimeType.startsWith('image/') && previewUrl && (
                 <img
-                  src={previewDoc.storagePath}
+                  src={previewUrl}
                   alt={previewDoc.name}
                   className="max-w-full max-h-[65vh] object-contain rounded"
                 />
               )}
 
-              {previewDoc.mimeType === 'application/pdf' && (
+              {!previewLoading && previewDoc.mimeType === 'application/pdf' && previewUrl && (
                 <iframe
-                  src={previewDoc.storagePath}
+                  src={previewUrl}
                   className="w-full h-[65vh] rounded border border-border"
                   title={previewDoc.name}
                 />

@@ -1,29 +1,25 @@
-// ============================================================
-// /api/folders/[id] — CRUD de pasta individual
-// ============================================================
-// PUT   /api/folders/:id  → atualiza nome/cor/parentId
-// DELETE /api/folders/:id → exclui a pasta
-// ============================================================
-
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { verifyAuth, unauthorized } from '@/lib/auth'
 
-// Atualiza os dados de uma pasta específica — apenas admin
 export async function PUT(request, { params }) {
   const auth = await verifyAuth(request)
   if (!auth || auth.role !== 'admin') return unauthorized()
   try {
     const { id } = await params
-    const data = await request.json()
+    const { name, parentId, color, sortOrder } = await request.json()
+    const data = {}
+    if (name !== undefined) data.name = String(name).slice(0, 100)
+    if (parentId !== undefined) data.parentId = parentId || null
+    if (color !== undefined) data.color = String(color).slice(0, 7)
+    if (sortOrder !== undefined) data.sortOrder = typeof sortOrder === 'number' ? sortOrder : 0
     const folder = await prisma.folder.update({ where: { id }, data })
     return NextResponse.json(folder)
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Erro ao atualizar pasta' }, { status: 500 })
   }
 }
 
-// Exclui uma pasta pelo ID — apenas admin
 export async function DELETE(request, { params }) {
   const auth = await verifyAuth(request)
   if (!auth || auth.role !== 'admin') return unauthorized()
@@ -31,7 +27,7 @@ export async function DELETE(request, { params }) {
     const { id } = await params
     await prisma.folder.delete({ where: { id } })
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Erro ao excluir pasta' }, { status: 500 })
   }
 }

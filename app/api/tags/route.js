@@ -1,13 +1,3 @@
-// ============================================================
-// /api/tags — CRUD de tags (etiquetas)
-// ============================================================
-// GET  /api/tags         → lista todas (admin) ou
-//      /api/tags?userId= → só tags vinculadas a senhas que o
-//                          funcionário pode ver
-// POST /api/tags         → cria uma nova tag (admin apenas)
-// PUT  /api/tags         → reordena tags (drag-and-drop)
-// ============================================================
-
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { verifyAuth, unauthorized } from '@/lib/auth'
@@ -16,50 +6,44 @@ export async function GET(request) {
   const auth = await verifyAuth(request)
   if (!auth) return unauthorized()
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-
-    // Funcionário: só tags usadas por senhas compartilhadas com ele
-    if (userId) {
+    if (auth.role === 'admin') {
       const tags = await prisma.tag.findMany({
-        where: {
-          passwords: {
-            some: {
-              password: {
-                sharedWith: { some: { userId } },
-              },
-            },
-          },
-        },
         orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       })
       return NextResponse.json(tags)
     }
 
-    // Admin: todas as tags
     const tags = await prisma.tag.findMany({
+      where: {
+        passwords: {
+          some: { password: { sharedWith: { some: { userId: auth.userId } } } },
+        },
+      },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     })
     return NextResponse.json(tags)
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Erro ao listar tags' }, { status: 500 })
   }
 }
 
-// Cria uma nova tag com name e color opcional
 export async function POST(request) {
   const auth = await verifyAuth(request)
-  if (!auth) return unauthorized()
+  if (!auth || auth.role !== 'admin') return unauthorized()
   try {
-    const data = await request.json()
-    const tag = await prisma.tag.create({ data })
+    const { name, color } = await request.json()
+    const tag = await prisma.tag.create({
+      data: {
+        name: String(name || 'Nova tag').slice(0, 50),
+        color: String(color || '#6366f1').slice(0, 7),
+      },
+    })
     return NextResponse.json(tag, { status: 201 })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Erro ao criar tag' }, { status: 500 })
   }
 }
 
-// Reordena tags via drag-and-drop (atualização em lote)
 export async function PUT(request) {
   const auth = await verifyAuth(request)
   if (!auth) return unauthorized()
@@ -71,13 +55,13 @@ export async function PUT(request) {
     await prisma.$transaction(
       order.map(({ id, sortOrder }, idx) =>
         prisma.tag.update({
-          where: { id },
-          data: { sortOrder: sortOrder ?? idx },
+          where: { id: String(id) },
+          data: { sortOrder: typeof sortOrder === 'number' ? sortOrder : idx },
         })
       )
     )
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Erro ao reordenar' }, { status: 500 })
   }
 }

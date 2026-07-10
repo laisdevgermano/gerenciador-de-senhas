@@ -51,7 +51,7 @@ export default function AppShell() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
     localStorage.removeItem('user')
     setUser(null)
     setAppState('login')

@@ -1,46 +1,41 @@
-// ============================================================
-// /api/passwords/[id] — CRUD de senha individual
-// ============================================================
-// PUT   /api/passwords/:id → atualiza senha
-// DELETE /api/passwords/:id → exclui senha
-// ============================================================
-
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { verifyAuth, unauthorized } from '@/lib/auth'
 
-// Atualiza uma senha: dados básicos + substituição de tags e
-// compartilhamentos (deleta os antigos e recria os novos)
-// Admin pode editar qualquer senha; funcionário precisa ter
-// permissão "write" no SharedAccess da senha.
 export async function PUT(request, { params }) {
   const auth = await verifyAuth(request)
   if (!auth) return unauthorized()
   try {
     const { id } = await params
 
-    // Funcionário: verifica permissão write antes de editar
     if (auth.role !== 'admin') {
       const access = await prisma.sharedAccess.findFirst({
         where: { passwordId: id, userId: auth.userId, permission: 'write' },
       })
-      if (!access) {
-        return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
-      }
+      if (!access) return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
     }
 
-    const data = await request.json()
-    const { tags, sharedWith, ...passwordData } = data
+    const body = await request.json()
+    const { name, username, password, url, notes, folderId, favorite, tags, sharedWith } = body
 
-    const password = await prisma.password.update({
+    const pwData = {}
+    if (name !== undefined) pwData.name = String(name).slice(0, 200)
+    if (username !== undefined) pwData.username = String(username).slice(0, 200)
+    if (password !== undefined) pwData.password = String(password)
+    if (url !== undefined) pwData.url = String(url).slice(0, 500)
+    if (notes !== undefined) pwData.notes = String(notes).slice(0, 2000)
+    if (folderId !== undefined) pwData.folderId = folderId || null
+    if (favorite !== undefined) pwData.favorite = Boolean(favorite)
+
+    const updated = await prisma.password.update({
       where: { id },
       data: {
-        ...passwordData,
+        ...pwData,
         tags: tags
-          ? { deleteMany: {}, create: tags.map((tagId) => ({ tagId })) }
+          ? { deleteMany: {}, create: tags.map((tagId) => ({ tagId: String(tagId) })) }
           : undefined,
         sharedWith: sharedWith
-          ? { deleteMany: {}, create: sharedWith.map((sa) => ({ userId: sa.userId || sa, permission: sa.permission || 'read' })) }
+          ? { deleteMany: {}, create: sharedWith.map((sa) => ({ userId: String(sa.userId || sa), permission: sa.permission || 'read' })) }
           : undefined,
       },
       include: {
@@ -50,33 +45,28 @@ export async function PUT(request, { params }) {
       },
     })
 
-    return NextResponse.json(password)
-  } catch (error) {
+    return NextResponse.json(updated)
+  } catch {
     return NextResponse.json({ error: 'Erro ao atualizar senha' }, { status: 500 })
   }
 }
 
-// Exclui uma senha (cascade deleta PasswordTag e SharedAccess)
-// Admin pode excluir qualquer uma; funcionário precisa de "write"
 export async function DELETE(request, { params }) {
   const auth = await verifyAuth(request)
   if (!auth) return unauthorized()
   try {
     const { id } = await params
 
-    // Funcionário: verifica permissão write antes de excluir
     if (auth.role !== 'admin') {
       const access = await prisma.sharedAccess.findFirst({
         where: { passwordId: id, userId: auth.userId, permission: 'write' },
       })
-      if (!access) {
-        return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
-      }
+      if (!access) return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
     }
 
     await prisma.password.delete({ where: { id } })
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Erro ao excluir senha' }, { status: 500 })
   }
 }

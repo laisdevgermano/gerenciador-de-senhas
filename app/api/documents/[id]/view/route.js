@@ -24,8 +24,8 @@ export async function GET(request, { params }) {
     }
 
     const url = getDownloadUrl(document.storagePath)
-    return NextResponse.redirect(url)
+    return NextResponse.json({ url, mimeType: document.mimeType })
   } catch {
-    return NextResponse.json({ error: 'Erro ao baixar arquivo' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao gerar URL' }, { status: 500 })
   }
 }

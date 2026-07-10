@@ -57,7 +57,6 @@ export default function LoginScreen({ onLogin }) {
         return
       }
 
-      localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.user))
       setLoading(false)
       onLogin(data.user)
