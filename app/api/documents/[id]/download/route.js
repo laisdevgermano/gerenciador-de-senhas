@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getDownloadUrl } from '@vercel/blob'
+import { get } from '@vercel/blob'
 import prisma from '@/lib/prisma'
 import { verifyAuth, unauthorized } from '@/lib/auth'
 
@@ -28,17 +28,14 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
     }
 
-    const blobUrl = getDownloadUrl(document.storagePath)
-    const res = await fetch(blobUrl)
-    if (!res.ok) throw new Error('Blob fetch failed')
+    const blob = await get(document.storagePath, { access: 'private' })
+    if (!blob) return NextResponse.json({ error: 'Arquivo não encontrado no storage' }, { status: 404 })
 
-    const buffer = await res.arrayBuffer()
-    return new NextResponse(buffer, {
+    return new Response(blob.stream, {
       headers: {
         'Content-Type': document.mimeType,
         'Content-Disposition': `attachment; filename="${document.fileName}"`,
         'Cache-Control': 'private, max-age=3600',
-        'Content-Length': String(buffer.byteLength),
       },
     })
   } catch (e) {

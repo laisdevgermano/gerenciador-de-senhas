@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getDownloadUrl } from '@vercel/blob'
+import { get } from '@vercel/blob'
 import prisma from '@/lib/prisma'
 import { verifyAuth, unauthorized } from '@/lib/auth'
 
@@ -16,22 +16,6 @@ async function checkAccess(document, userId, role) {
   return false
 }
 
-async function serveBlob(document, disposition) {
-  const blobUrl = getDownloadUrl(document.storagePath)
-  const res = await fetch(blobUrl)
-  if (!res.ok) throw new Error('Blob fetch failed')
-
-  const buffer = await res.arrayBuffer()
-  return new NextResponse(buffer, {
-    headers: {
-      'Content-Type': document.mimeType,
-      'Content-Disposition': `${disposition}; filename="${document.fileName}"`,
-      'Cache-Control': 'private, max-age=3600',
-      'Content-Length': String(buffer.byteLength),
-    },
-  })
-}
-
 export async function GET(request, { params }) {
   const auth = await verifyAuth(request)
   if (!auth) return unauthorized()
@@ -44,7 +28,16 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
     }
 
-    return await serveBlob(document, 'inline')
+    const blob = await get(document.storagePath, { access: 'private' })
+    if (!blob) return NextResponse.json({ error: 'Arquivo não encontrado no storage' }, { status: 404 })
+
+    return new Response(blob.stream, {
+      headers: {
+        'Content-Type': document.mimeType,
+        'Content-Disposition': `inline; filename="${document.fileName}"`,
+        'Cache-Control': 'private, max-age=3600',
+      },
+    })
   } catch (e) {
     console.error('View error:', e?.message)
     return NextResponse.json({ error: 'Erro ao visualizar' }, { status: 500 })

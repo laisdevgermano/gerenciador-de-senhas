@@ -53,7 +53,24 @@ function formatFileSize(bytes) {
 }
 
 function ImageThumb({ doc }) {
-  return <img src={`/api/documents/${doc.id}/view`} alt={doc.name} className="w-full h-20 object-cover rounded mb-2" />
+  const [src, setSrc] = useState(null)
+  useEffect(() => {
+    let revoke = null
+    fetch(`/api/documents/${doc.id}/view`, { credentials: 'include' })
+      .then((r) => {
+        if (!r.ok) throw new Error('fail')
+        return r.blob()
+      })
+      .then((blob) => {
+        const url = URL.createObjectURL(blob)
+        revoke = url
+        setSrc(url)
+      })
+      .catch(() => {})
+    return () => { if (revoke) URL.revokeObjectURL(revoke) }
+  }, [doc.id])
+  if (!src) return <div className="w-full h-20 bg-surface-tertiary rounded mb-2 animate-pulse" />
+  return <img src={src} alt={doc.name} className="w-full h-20 object-cover rounded mb-2" />
 }
 
 export default function DocumentExplorer({ type = 'folder', id, inline = false }) {
@@ -116,13 +133,20 @@ export default function DocumentExplorer({ type = 'folder', id, inline = false }
     setIsDragging(false)
   }
 
-  const handleDownload = (doc) => {
-    const link = document.createElement('a')
-    link.href = `/api/documents/${doc.id}/download`
-    link.download = doc.fileName
-    link.target = '_blank'
-    link.rel = 'noopener noreferrer'
-    link.click()
+  const handleDownload = async (doc) => {
+    try {
+      const res = await fetch(`/api/documents/${doc.id}/download`, { credentials: 'include' })
+      if (!res.ok) throw new Error('Falha ao baixar')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = doc.fileName
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert('Erro ao baixar arquivo')
+    }
   }
 
   const handleStartRename = (doc) => {
@@ -171,7 +195,10 @@ export default function DocumentExplorer({ type = 'folder', id, inline = false }
         const textRes = await fetch(viewUrl, { credentials: 'include' })
         setPreviewContent(await textRes.text())
       } else {
-        setPreviewUrl(viewUrl)
+        const res = await fetch(viewUrl, { credentials: 'include' })
+        if (!res.ok) throw new Error('Falha ao carregar')
+        const blob = await res.blob()
+        setPreviewUrl(URL.createObjectURL(blob))
       }
     } catch {
       setPreviewContent('Erro ao carregar conteúdo.')
