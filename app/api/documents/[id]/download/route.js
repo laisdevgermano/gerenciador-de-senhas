@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server'
-import { readFile } from 'fs/promises'
-import { join } from 'path'
 import prisma from '@/lib/prisma'
 import { verifyAuth, unauthorized } from '@/lib/auth'
 
@@ -14,15 +12,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Documento não encontrado' }, { status: 404 })
     }
 
-    const filePath = join(process.cwd(), 'public', document.storagePath)
-    const fileBuffer = await readFile(filePath)
-
-    return new NextResponse(fileBuffer, {
-      headers: {
-        'Content-Type': document.mimeType,
-        'Content-Disposition': `attachment; filename="${document.fileName}"`,
-      },
-    })
+    return NextResponse.redirect(document.storagePath)
   } catch {
     return NextResponse.json({ error: 'Erro ao baixar arquivo' }, { status: 500 })
   }

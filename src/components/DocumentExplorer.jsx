@@ -113,8 +113,10 @@ export default function DocumentExplorer({ type = 'folder', id, inline = false }
 
   const handleDownload = (doc) => {
     const link = document.createElement('a')
-    link.href = `/api/documents/${doc.id}/download`
+    link.href = doc.storagePath
     link.download = doc.fileName
+    link.target = '_blank'
+    link.rel = 'noopener noreferrer'
     link.click()
   }
 
@@ -159,7 +161,7 @@ export default function DocumentExplorer({ type = 'folder', id, inline = false }
     if (doc.mimeType === 'text/plain' || doc.mimeType === 'text/csv') {
       setPreviewLoading(true)
       try {
-        const res = await fetch(`/api/documents/${doc.id}/download`)
+        const res = await fetch(doc.storagePath)
         const text = await res.text()
         setPreviewContent(text)
       } catch {

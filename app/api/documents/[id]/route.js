@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { unlink } from 'fs/promises'
-import { join } from 'path'
+import { del } from '@vercel/blob'
 import prisma from '@/lib/prisma'
 import { verifyAuth, unauthorized } from '@/lib/auth'
 
@@ -32,8 +31,9 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Documento não encontrado' }, { status: 404 })
     }
 
-    const filePath = join(process.cwd(), 'public', document.storagePath)
-    await unlink(filePath).catch(() => {})
+    if (document.storagePath) {
+      await del(document.storagePath).catch(() => {})
+    }
 
     await prisma.document.delete({ where: { id } })
     return NextResponse.json({ success: true })

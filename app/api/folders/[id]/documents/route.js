@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
+import { put } from '@vercel/blob'
 import prisma from '@/lib/prisma'
 import { verifyAuth, unauthorized } from '@/lib/auth'
 
@@ -58,15 +57,13 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Tipo de arquivo não permitido' }, { status: 400 })
     }
 
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-
     const ext = file.name.split('.').pop()
     const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-    const uploadDir = join(process.cwd(), 'public', 'uploads')
-    await mkdir(uploadDir, { recursive: true })
-    const filePath = join(uploadDir, uniqueName)
-    await writeFile(filePath, buffer)
+
+    const blob = await put(uniqueName, file, {
+      access: 'public',
+      contentType: file.type,
+    })
 
     const document = await prisma.document.create({
       data: {
@@ -74,14 +71,15 @@ export async function POST(request, { params }) {
         fileName: file.name,
         mimeType: file.type,
         size: file.size,
-        storagePath: `/uploads/${uniqueName}`,
+        storagePath: blob.url,
         folderId: id,
         createdBy: auth.userId,
       },
     })
 
     return NextResponse.json(document, { status: 201 })
-  } catch {
+  } catch (e) {
+    console.error('POST /api/folders/[id]/documents error:', e)
     return NextResponse.json({ error: 'Erro ao enviar arquivo' }, { status: 500 })
   }
 }
