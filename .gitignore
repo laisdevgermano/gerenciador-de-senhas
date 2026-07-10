@@ -18,6 +18,13 @@ check-users.mjs
 reset-pass.mjs
 .env.vercel
 test-*.mjs
+test-db.cjs
+server-output.log
+server-error.log
+
+# Uploaded files (stored locally, not in version control)
+public/uploads/*
+!public/uploads/.gitkeep
 
 # Editor directories and files
 .vscode/*

@@ -74,16 +74,25 @@ app/
     │   ├── route.js          # GET /api/users — listar; POST — criar; PUT — reordenar
     │   └── [id]/
     │       ├── route.js      # PUT /api/users/[id] — atualizar; DELETE — excluir
-    │       └── access/route.js # GET/PUT /api/users/[id]/access — compartilhamentos
+    │       ├── access/route.js # GET/PUT /api/users/[id]/access — compartilhamentos
+    │       └── documents/route.js # GET/POST /api/users/[id]/documents — listar/enviar anexos
     ├── passwords/
     │   ├── route.js          # GET /api/passwords — listar; POST — criar; PUT — reordenar
     │   └── [id]/route.js     # PUT /api/passwords/[id] — atualizar; DELETE — excluir
     ├── folders/
     │   ├── route.js          # GET /api/folders — listar; POST — criar; PUT — reordenar
-    │   └── [id]/route.js     # PUT /api/folders/[id] — atualizar; DELETE — excluir
+    │   └── [id]/
+    │       ├── route.js      # PUT /api/folders/[id] — atualizar; DELETE — excluir
+    │       └── documents/route.js # GET/POST /api/folders/[id]/documents — listar/enviar anexos
     ├── tags/
     │   ├── route.js          # GET /api/tags — listar; POST — criar; PUT — reordenar
-    │   └── [id]/route.js     # PUT /api/tags/[id] — atualizar; DELETE — excluir
+    │   └── [id]/
+    │       ├── route.js      # PUT /api/tags/[id] — atualizar; DELETE — excluir
+    │       └── documents/route.js # GET/POST /api/tags/[id]/documents — listar/enviar anexos
+    ├── documents/
+    │   └── [id]/
+    │       ├── route.js      # PUT/DELETE /api/documents/[id] — atualizar/excluir anexo
+    │       └── download/route.js # GET /api/documents/[id]/download — baixar arquivo
     └── audit/route.js        # GET /api/audit — histórico de auditoria
 ```
 
@@ -109,6 +118,7 @@ prisma/
 | `Tag` | Etiquetas coloridas para categorização |
 | `PasswordTag` | Relação N:N entre senhas e tags |
 | `SharedAccess` | Controle de compartilhamento (permission: read/write) |
+| `Document` | Anexos de arquivos vinculados a pastas, funcionários ou tags |
 
 ---
 
@@ -150,6 +160,7 @@ components/
 ├── Avatar.jsx                # Avatar circular com iniciais + cor derivada do nome
 ├── Badge.jsx                 # Etiqueta colorida (status, tags, variantes)
 ├── Button.jsx                # Botão reutilizável (primary/secondary/ghost/danger/outline)
+├── DocumentExplorer.jsx      # Explorer de anexos: upload, preview inline, download, exclusão
 ├── EmptyState.jsx            # Placeholder para listas vazias (ícone + mensagem + ação)
 ├── Input.jsx                 # Input de formulário com label, erro, hint e ícone
 ├── Modal.jsx                 # Modal com backdrop, tecla Escape, tamanhos configuráveis
@@ -166,6 +177,7 @@ components/
 | Avatar | SettingsScreen, Sidebar, ShareModal, PasswordFormModal |
 | Badge | DashboardScreen, EmployeeScreen, TagScreen, ShareModal, PasswordFormModal, Sidebar |
 | Button | LoginScreen, OnboardingScreen, DashboardScreen, SettingsScreen, FolderScreen, EmployeeScreen, TagScreen, ShareModal, PasswordFormModal |
+| DocumentExplorer | DashboardScreen, FolderScreen |
 | EmptyState | DashboardScreen, FolderScreen, EmployeeScreen, TagScreen, AuditScreen |
 | Input | LoginScreen, SettingsScreen, FolderScreen, EmployeeScreen, TagScreen, ShareModal, PasswordFormModal |
 | Modal | FolderScreen, EmployeeScreen, TagScreen, ShareModal, PasswordFormModal |
@@ -216,8 +228,8 @@ context/
 **StoreContext** é o coração dos dados da aplicação. Mantém:
 - Arrays de `passwords`, `folders`, `tags`, `users`
 - Objeto `api` com métodos `get/post/put/delete` (injeta JWT automaticamente)
-- Funções CRUD para cada entidade
-- Helpers de consulta: `getPasswordById`, `getPasswordsByFolder`, `getPasswordsByTag`, etc.
+- Funções CRUD para cada entidade (incluindo `addDocument`, `loadDocuments`, `deleteDocument`)
+- Funções de consulta: `getDocumentsByUser`, `getDocumentsByTag`, `getDocumentApiBase`
 - `loadData()` que busca todos os dados conforme a role do usuário
 
 ---
@@ -252,6 +264,9 @@ User (1) ────< Password          (criada por)
 Folder (1) ──< Password          (opcional)
 Password >───< PasswordTag >─── Tag
 Folder ────< Folder (subpastas, auto-relacionamento)
+Folder (1) ──< Document          (anexos de pasta)
+User (1) ────< Document          (anexos de funcionário)
+Tag (1) ─────< Document          (anexos de tag)
 ```
 
 ---
@@ -288,3 +303,44 @@ vercel --prod                   # Deploy de produção
 Variáveis de ambiente necessárias na Vercel:
 - `DATABASE_URL` — string de conexão PostgreSQL (Neon)
 - `JWT_SECRET` — chave secreta para assinar tokens JWT
+
+---
+
+## Anexos de Arquivos
+
+O sistema permite anexar arquivos a **pastas** (Clientes), **funcionários** e **tags**.
+
+### Tipos de arquivo suportados
+
+| Categoria | Formatos |
+|-----------|----------|
+| Imagens | PNG, JPEG, GIF, WebP, SVG, BMP |
+| Documentos | PDF, TXT, CSV |
+| Office | Word (.doc, .docx), Excel (.xls, .xlsx), PowerPoint (.ppt, .pptx) |
+
+### Limites
+
+- Tamanho máximo: **10 MB** por arquivo
+- Armazenamento local em `public/uploads/`
+- Upload via `FormData` multipart
+
+### Funcionalidades
+
+- **Upload**: selecionar arquivo e anexar a uma pasta, funcionário ou tag
+- **Visualização inline**: imagens, PDFs e arquivos de texto são exibidos diretamente no modal
+- **Download**: arquivos Office e outros são baixados localmente
+- **Exclusão**: remover anexos com exclusão do arquivo em disco
+
+### Rotas de API
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| `GET` | `/api/folders/[id]/documents` | Listar anexos de uma pasta |
+| `POST` | `/api/folders/[id]/documents` | Enviar anexo para uma pasta |
+| `GET` | `/api/users/[id]/documents` | Listar anexos de um funcionário |
+| `POST` | `/api/users/[id]/documents` | Enviar anexo para um funcionário |
+| `GET` | `/api/tags/[id]/documents` | Listar anexos de uma tag |
+| `POST` | `/api/tags/[id]/documents` | Enviar anexo para uma tag |
+| `GET` | `/api/documents/[id]/download` | Baixar arquivo |
+| `PUT` | `/api/documents/[id]` | Atualizar metadados do anexo |
+| `DELETE` | `/api/documents/[id]` | Excluir anexo |
