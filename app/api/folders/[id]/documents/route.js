@@ -63,7 +63,8 @@ export async function POST(request, { params }) {
       },
     })
     return NextResponse.json(document, { status: 201 })
-  } catch {
-    return NextResponse.json({ error: 'Erro ao enviar arquivo' }, { status: 500 })
+  } catch (e) {
+    console.error('Upload folder doc error:', e?.message, e?.name, e?.cause?.message)
+    return NextResponse.json({ error: 'Erro ao enviar arquivo', detail: e?.message }, { status: 500 })
   }
 }
