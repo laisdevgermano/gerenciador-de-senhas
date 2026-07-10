@@ -92,6 +92,16 @@ const api = {
     handleUnauthorized(res)
     return handleResponse(res, `excluir ${path}`)
   },
+  async upload(path, formData) {
+    const token = localStorage.getItem('token')
+    const res = await fetchWithTimeout(`/api${path}`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    })
+    handleUnauthorized(res)
+    return handleResponse(res, `enviar arquivo em ${path}`)
+  },
 }
 
 // --- Normalização de senha ---
@@ -124,6 +134,7 @@ export function StoreProvider({ children, currentUser }) {
   const [folders, setFolders] = useState([])
   const [tags, setTags] = useState([])
   const [users, setUsers] = useState([])
+  const [documents, setDocuments] = useState([])
   const [loading, setLoading] = useState(false)
 
   // Funcionários = todos os usuários que não são admin
@@ -269,6 +280,86 @@ export function StoreProvider({ children, currentUser }) {
   }, [])
 
   // ============================================================
+  // CRUD — Documents (Documentos)
+  // ============================================================
+  // Suporta 3 tipos de destino: folder (clientes), user (funcionários), tag
+  // Cada tipo tem sua própria rota de API: /folders/[id]/documents, /users/[id]/documents, /tags/[id]/documents
+
+  function getDocumentApiBase(type, id) {
+    if (type === 'user') return `/users/${id}/documents`
+    if (type === 'tag') return `/tags/${id}/documents`
+    return `/folders/${id}/documents`
+  }
+
+  function getDocFilterKey(type) {
+    if (type === 'user') return 'userId'
+    if (type === 'tag') return 'tagId'
+    return 'folderId'
+  }
+
+  const loadDocuments = useCallback(async (type, id) => {
+    const docs = await api.get(getDocumentApiBase(type, id))
+    const key = getDocFilterKey(type)
+    setDocuments((prev) => {
+      const others = prev.filter((d) => d[key] !== id)
+      return [...others, ...docs]
+    })
+    return docs
+  }, [])
+
+  const addDocument = useCallback(async (type, id, formData) => {
+    const doc = await api.upload(getDocumentApiBase(type, id), formData)
+    setDocuments((prev) => [...prev, doc])
+    return doc
+  }, [])
+
+  const deleteDocument = useCallback(async (id) => {
+    await api.delete(`/documents/${id}`)
+    setDocuments((prev) => prev.filter((d) => d.id !== id))
+  }, [])
+
+  const renameDocument = useCallback(async (id, name) => {
+    const doc = await api.put(`/documents/${id}`, { name })
+    setDocuments((prev) => prev.map((d) => (d.id === id ? doc : d)))
+    return doc
+  }, [])
+
+  const moveDocument = useCallback(async (id, type, targetId) => {
+    const data = {}
+    if (type === 'folder') {
+      data.folderId = targetId
+      data.userId = null
+      data.tagId = null
+    } else if (type === 'user') {
+      data.userId = targetId
+      data.folderId = null
+      data.tagId = null
+    } else if (type === 'tag') {
+      data.tagId = targetId
+      data.folderId = null
+      data.userId = null
+    }
+    const doc = await api.put(`/documents/${id}`, data)
+    setDocuments((prev) => prev.map((d) => (d.id === id ? doc : d)))
+    return doc
+  }, [])
+
+  const getDocumentsByFolder = useCallback(
+    (folderId) => documents.filter((d) => d.folderId === folderId),
+    [documents]
+  )
+
+  const getDocumentsByUser = useCallback(
+    (userId) => documents.filter((d) => d.userId === userId),
+    [documents]
+  )
+
+  const getDocumentsByTag = useCallback(
+    (tagId) => documents.filter((d) => d.tagId === tagId),
+    [documents]
+  )
+
+  // ============================================================
   // CRUD — Employees (Funcionários)
   // ============================================================
   const addEmployee = useCallback(async (data) => {
@@ -361,11 +452,12 @@ export function StoreProvider({ children, currentUser }) {
   // Valor exposto pelo contexto
   // ============================================================
   const value = {
-    passwords, folders, tags, users, employees, currentUser, loading,
+    passwords, folders, tags, users, employees, currentUser, loading, documents,
     loadData,
     addPassword, updatePassword, deletePassword, reorderPasswords,
     addFolder, updateFolder, deleteFolder, reorderFolders,
     addTag, updateTag, deleteTag, reorderTags,
+    addDocument, deleteDocument, loadDocuments, getDocumentsByFolder, getDocumentsByUser, getDocumentsByTag, renameDocument, moveDocument,
     addEmployee, updateEmployee, deleteEmployee,
     setEmployeeAccess, reorderEmployees, getEmployeeAccess,
     updateUser,

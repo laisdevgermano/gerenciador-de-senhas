@@ -12,7 +12,7 @@
 //   - Painel de detalhes da senha selecionada
 // ============================================================
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   Globe,
   User,
@@ -28,6 +28,9 @@ import {
   Tags,
   Lock,
   Search,
+  Paperclip,
+  Tag,
+  Users,
 } from 'lucide-react'
 import { useStore } from '../context/StoreContext'
 import Sidebar from '../components/Sidebar'
@@ -42,6 +45,8 @@ import SettingsScreen from './SettingsScreen'
 import EmployeeScreen from './EmployeeScreen'
 import FolderScreen from './FolderScreen'
 import TagScreen from './TagScreen'
+import Modal from '../components/Modal'
+import DocumentExplorer from '../components/DocumentExplorer'
 
 export default function DashboardScreen({ onLogout }) {
   const {
@@ -62,6 +67,8 @@ export default function DashboardScreen({ onLogout }) {
     getTagById,
     getUserById,
     loadData,
+    loadDocuments,
+    addDocument,
   } = useStore()
 
   useEffect(() => { loadData() }, [loadData])
@@ -80,6 +87,12 @@ export default function DashboardScreen({ onLogout }) {
 
   const [activeColumnFilter, setActiveColumnFilter] = useState(null)
   const [columnSort, setColumnSort] = useState({ key: null, order: 'asc' })
+  const [showAttachModal, setShowAttachModal] = useState(false)
+  const [attachStep, setAttachStep] = useState(1)
+  const [attachCategory, setAttachCategory] = useState(null)
+  const [attachTarget, setAttachTarget] = useState(null)
+  const attachFileInputRef = useRef(null)
+  const [showDocsForEntity, setShowDocsForEntity] = useState(false)
 
   useEffect(() => {
     setSelectedPassword(null)
@@ -88,9 +101,71 @@ export default function DashboardScreen({ onLogout }) {
     setEditingPassword(null)
     setActiveColumnFilter(null)
     setColumnSort({ key: null, order: 'asc' })
+    setShowDocsForEntity(false)
   }, [selectedFilter])
 
   const isAdmin = currentUser?.role === 'admin'
+
+  const handleAttachClick = () => {
+    if (selectedFilter.startsWith('folder:')) {
+      setAttachTarget({ type: 'folder', id: selectedFilter.split(':')[1] })
+      setTimeout(() => attachFileInputRef.current?.click(), 100)
+    } else if (selectedFilter.startsWith('employee:')) {
+      setAttachTarget({ type: 'user', id: selectedFilter.split(':')[1] })
+      setTimeout(() => attachFileInputRef.current?.click(), 100)
+    } else if (selectedFilter.startsWith('tag:')) {
+      setAttachTarget({ type: 'tag', id: selectedFilter.split(':')[1] })
+      setTimeout(() => attachFileInputRef.current?.click(), 100)
+    } else {
+      setAttachStep(1)
+      setAttachCategory(null)
+      setAttachTarget(null)
+      setShowAttachModal(true)
+    }
+  }
+
+  const handleAttachFileSelect = async (e) => {
+    const file = e.target.files[0]
+    if (!file || !attachTarget) return
+    e.target.value = ''
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Arquivo excede 10MB')
+      return
+    }
+    const allowed = [
+      'application/pdf','text/plain','text/csv',
+      'image/png','image/jpeg','image/gif','image/webp','image/svg+xml','image/bmp',
+      'application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    ]
+    if (!allowed.includes(file.type)) {
+      alert('Tipo de arquivo não permitido')
+      return
+    }
+    const formData = new FormData()
+    formData.append('file', file)
+    try {
+      await addDocument(attachTarget.type, attachTarget.id, formData)
+      await loadDocuments(attachTarget.type, attachTarget.id)
+      setShowDocsForEntity(true)
+    } catch (err) {
+      alert(err.message || 'Erro ao enviar arquivo')
+    }
+    setShowAttachModal(false)
+    setAttachTarget(null)
+  }
+
+  const handleAttachCategorySelect = (category) => {
+    setAttachCategory(category)
+    setAttachStep(2)
+  }
+
+  const handleAttachItemSelect = (type, id) => {
+    setAttachTarget({ type, id })
+    setShowAttachModal(false)
+    setTimeout(() => attachFileInputRef.current?.click(), 100)
+  }
 
   const filteredPasswords = useMemo(() => {
     let result = passwords
@@ -434,11 +509,23 @@ export default function DashboardScreen({ onLogout }) {
               />
             </div>
             <ThemeToggle />
-            {(selectedFilter === 'all' || selectedFilter.startsWith('folder:') || selectedFilter.startsWith('employee:')) && !isCreating && (
-              <Button size="sm" onClick={handleNewPassword}>
-                Nova senha
-              </Button>
+            {(selectedFilter === 'all' || selectedFilter.startsWith('folder:') || selectedFilter.startsWith('employee:') || selectedFilter.startsWith('tag:')) && !isCreating && (
+              <>
+                <Button size="sm" variant="outline" icon={Paperclip} onClick={handleAttachClick}>
+                  Anexar
+                </Button>
+                <Button size="sm" onClick={handleNewPassword}>
+                  Nova senha
+                </Button>
+              </>
             )}
+            <input
+              ref={attachFileInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.png,.jpg,.jpeg,.gif,.webp,.svg,.bmp"
+              onChange={handleAttachFileSelect}
+              className="hidden"
+            />
           </div>
         </header>
 
@@ -538,6 +625,34 @@ export default function DashboardScreen({ onLogout }) {
               />
             </div>
           )}
+
+          {(selectedFilter.startsWith('employee:') || selectedFilter.startsWith('tag:')) && !isCreating && !selectedPassword && (
+            <div className="mt-4">
+              <button
+                onClick={async () => {
+                  const next = !showDocsForEntity
+                  setShowDocsForEntity(next)
+                  if (next) {
+                    const entityType = selectedFilter.startsWith('employee:') ? 'user' : 'tag'
+                    const entityId = selectedFilter.split(':')[1]
+                    await loadDocuments(entityType, entityId)
+                  }
+                }}
+                className="flex items-center gap-2 text-sm text-text-muted hover:text-text-primary mb-2 cursor-pointer"
+              >
+                <Paperclip size={14} />
+                <span className="font-medium">
+                  {showDocsForEntity ? 'Ocultar documentos' : 'Ver documentos anexados'}
+                </span>
+              </button>
+              {showDocsForEntity && (
+                <DocumentExplorer
+                  type={selectedFilter.startsWith('employee:') ? 'user' : 'tag'}
+                  id={selectedFilter.split(':')[1]}
+                />
+              )}
+            </div>
+          )}
         </div>
       </main>
 
@@ -559,6 +674,100 @@ export default function DashboardScreen({ onLogout }) {
             }
           }}
         />
+      )}
+
+      {showAttachModal && (
+        <Modal
+          open
+          onClose={() => { setShowAttachModal(false); setAttachStep(1); setAttachCategory(null); setAttachTarget(null) }}
+          title={attachStep === 1 ? 'Anexar arquivo' : `Anexar a ${attachCategory === 'employee' ? 'Funcionário' : attachCategory === 'folder' ? 'Cliente' : 'Tag'}`}
+          size="sm"
+          actions={
+            <Button variant="ghost" onClick={() => { setShowAttachModal(false); setAttachStep(1); setAttachCategory(null); setAttachTarget(null) }}>
+              Cancelar
+            </Button>
+          }
+        >
+          {attachStep === 1 ? (
+            <>
+              <p className="text-sm text-text-secondary mb-3">Selecione a categoria:</p>
+              <div className="space-y-1">
+                <button
+                  onClick={() => handleAttachCategorySelect('employee')}
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors cursor-pointer text-left"
+                >
+                  <Users size={18} className="text-brand" />
+                  <div>
+                    <p className="font-medium text-text-primary">Funcionários</p>
+                    <p className="text-xs text-text-muted">Anexar a um funcionário</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => handleAttachCategorySelect('folder')}
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors cursor-pointer text-left"
+                >
+                  <FolderClosed size={18} className="text-brand" />
+                  <div>
+                    <p className="font-medium text-text-primary">Clientes</p>
+                    <p className="text-xs text-text-muted">Anexar a um cliente</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => handleAttachCategorySelect('tag')}
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors cursor-pointer text-left"
+                >
+                  <Tag size={18} className="text-brand" />
+                  <div>
+                    <p className="font-medium text-text-primary">Tags</p>
+                    <p className="text-xs text-text-muted">Anexar a uma tag</p>
+                  </div>
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-text-secondary mb-3">Selecione o destino:</p>
+              <div className="space-y-1 max-h-60 overflow-y-auto">
+                {attachCategory === 'employee' && employees.map((emp) => (
+                  <button
+                    key={emp.id}
+                    onClick={() => handleAttachItemSelect('user', emp.id)}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors cursor-pointer text-left"
+                  >
+                    <User size={16} className="text-text-muted" />
+                    {emp.name}
+                  </button>
+                ))}
+                {attachCategory === 'folder' && folders.filter(f => !f.parentId).map((folder) => (
+                  <button
+                    key={folder.id}
+                    onClick={() => handleAttachItemSelect('folder', folder.id)}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors cursor-pointer text-left"
+                  >
+                    <FolderClosed size={16} style={{ color: folder.color || '#94a3b8' }} />
+                    {folder.name}
+                  </button>
+                ))}
+                {attachCategory === 'tag' && tags.map((tag) => (
+                  <button
+                    key={tag.id}
+                    onClick={() => handleAttachItemSelect('tag', tag.id)}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors cursor-pointer text-left"
+                  >
+                    <Tag size={16} style={{ color: tag.color || '#94a3b8' }} />
+                    {tag.name}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setAttachStep(1)}
+                className="mt-3 text-xs text-text-muted hover:text-brand cursor-pointer"
+              >
+                ← Voltar
+              </button>
+            </>
+          )}
+        </Modal>
       )}
     </div>
   )

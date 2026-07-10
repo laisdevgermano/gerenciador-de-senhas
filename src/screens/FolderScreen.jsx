@@ -22,10 +22,25 @@ import Button from '../components/Button'
 import Modal from '../components/Modal'
 import Input from '../components/Input'
 import EmptyState from '../components/EmptyState'
+import DocumentExplorer from '../components/DocumentExplorer'
 import { useStore } from '../context/StoreContext'
 
 export default function FolderScreen() {
-  const { folders, getChildrenFolders, addFolder, updateFolder, deleteFolder, getPasswordsByFolder, reorderFolders, currentUser } = useStore()
+  const { folders, getChildrenFolders, addFolder, updateFolder, deleteFolder, getPasswordsByFolder, reorderFolders, currentUser, loadDocuments } = useStore()
+
+  const [showModal, setShowModal] = useState(false)
+  const [editingFolder, setEditingFolder] = useState(null)
+  const [expanded, setExpanded] = useState({})
+  const [selectedFolderId, setSelectedFolderId] = useState(null)
+
+  const toggleExpand = (id) => {
+    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const handleSelectFolder = async (folderId) => {
+    setSelectedFolderId(folderId)
+    await loadDocuments('folder', folderId)
+  }
 
   // Apenas admin pode gerenciar pastas
   if (currentUser?.role !== 'admin') {
@@ -34,13 +49,6 @@ export default function FolderScreen() {
         <p className="text-sm text-text-muted">Acesso restrito a administradores.</p>
       </div>
     )
-  }
-  const [showModal, setShowModal] = useState(false)
-  const [editingFolder, setEditingFolder] = useState(null)
-  const [expanded, setExpanded] = useState({})
-
-  const toggleExpand = (id) => {
-    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }))
   }
 
   const rootFolders = folders.filter((f) => !f.parentId)
@@ -105,7 +113,15 @@ export default function FolderScreen() {
             onDelete={handleDelete}
             getChildren={getChildrenFolders}
             onReorder={handleReorder}
+            onSelect={handleSelectFolder}
+            selectedFolderId={selectedFolderId}
           />
+        </div>
+      )}
+
+      {selectedFolderId && (
+        <div className="mt-6">
+          <DocumentExplorer type="folder" id={selectedFolderId} />
         </div>
       )}
 
@@ -132,7 +148,7 @@ export default function FolderScreen() {
   )
 }
 
-function FolderTree({ folders, expanded, onToggle, onEdit, onDelete, getChildren, onReorder, depth = 0 }) {
+function FolderTree({ folders, expanded, onToggle, onEdit, onDelete, getChildren, onReorder, onSelect, selectedFolderId, depth = 0 }) {
   const [dragIndex, setDragIndex] = useState(null)
   const [dragOverIndex, setDragOverIndex] = useState(null)
   const dragNode = useRef(null)
@@ -230,8 +246,8 @@ function FolderTree({ folders, expanded, onToggle, onEdit, onDelete, getChildren
                 style={{ color: folder.color || '#94a3b8' }}
               />
 
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-text-primary truncate">{folder.name}</p>
+              <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onSelect?.(folder.id)}>
+                <p className={`text-sm font-medium truncate ${selectedFolderId === folder.id ? 'text-brand' : 'text-text-primary'}`}>{folder.name}</p>
                 {folder.parentId && (
                   <p className="text-xs text-text-muted">Subpasta</p>
                 )}
@@ -262,6 +278,8 @@ function FolderTree({ folders, expanded, onToggle, onEdit, onDelete, getChildren
                 onDelete={onDelete}
                 getChildren={getChildren}
                 onReorder={onReorder}
+                onSelect={onSelect}
+                selectedFolderId={selectedFolderId}
                 depth={depth + 1}
               />
             )}
