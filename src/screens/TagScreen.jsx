@@ -12,10 +12,11 @@ import Modal from '../components/Modal'
 import Input from '../components/Input'
 import Badge from '../components/Badge'
 import EmptyState from '../components/EmptyState'
+import DocumentExplorer from '../components/DocumentExplorer'
 import { useStore } from '../context/StoreContext'
 
 export default function TagScreen() {
-  const { tags, passwords, addTag, updateTag, deleteTag, currentUser } = useStore()
+  const { tags, passwords, addTag, updateTag, deleteTag, currentUser, loadDocuments } = useStore()
 
   // Apenas admin pode gerenciar tags
   if (currentUser?.role !== 'admin') {
@@ -27,6 +28,7 @@ export default function TagScreen() {
   }
   const [showModal, setShowModal] = useState(false)
   const [editingTag, setEditingTag] = useState(null)
+  const [selectedTagId, setSelectedTagId] = useState(null)
 
   const getPasswordCount = (tagId) =>
     passwords.filter((p) => p.tags.includes(tagId)).length
@@ -39,6 +41,11 @@ export default function TagScreen() {
     if (confirm(msg)) {
       await deleteTag(tag.id)
     }
+  }
+
+  const handleSelectTag = async (tagId) => {
+    setSelectedTagId(tagId)
+    await loadDocuments('tag', tagId)
   }
 
   return (
@@ -75,7 +82,10 @@ export default function TagScreen() {
           {tags.map((tag) => (
             <div
               key={tag.id}
-              className="bg-surface rounded-xl border border-border p-4 shadow-sm flex items-center gap-3 group hover:border-border-hover transition-colors"
+              onClick={() => handleSelectTag(tag.id)}
+              className={`bg-surface rounded-xl border p-4 shadow-sm flex items-center gap-3 group hover:border-border-hover transition-colors cursor-pointer ${
+                selectedTagId === tag.id ? 'border-brand ring-1 ring-brand/20' : 'border-border'
+              }`}
             >
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center"
@@ -110,6 +120,12 @@ export default function TagScreen() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {selectedTagId && (
+        <div className="mt-6">
+          <DocumentExplorer type="tag" id={selectedTagId} />
         </div>
       )}
 

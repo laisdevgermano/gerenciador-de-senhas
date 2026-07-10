@@ -626,14 +626,16 @@ export default function DashboardScreen({ onLogout }) {
             </div>
           )}
 
-          {(selectedFilter.startsWith('employee:') || selectedFilter.startsWith('tag:')) && !isCreating && !selectedPassword && (
+          {(selectedFilter.startsWith('employee:') || selectedFilter.startsWith('tag:') || selectedFilter.startsWith('folder:')) && !isCreating && !selectedPassword && (
             <div className="mt-4">
               <button
                 onClick={async () => {
                   const next = !showDocsForEntity
                   setShowDocsForEntity(next)
                   if (next) {
-                    const entityType = selectedFilter.startsWith('employee:') ? 'user' : 'tag'
+                    let entityType = 'folder'
+                    if (selectedFilter.startsWith('employee:')) entityType = 'user'
+                    else if (selectedFilter.startsWith('tag:')) entityType = 'tag'
                     const entityId = selectedFilter.split(':')[1]
                     await loadDocuments(entityType, entityId)
                   }
@@ -647,7 +649,7 @@ export default function DashboardScreen({ onLogout }) {
               </button>
               {showDocsForEntity && (
                 <DocumentExplorer
-                  type={selectedFilter.startsWith('employee:') ? 'user' : 'tag'}
+                  type={selectedFilter.startsWith('employee:') ? 'user' : selectedFilter.startsWith('tag:') ? 'tag' : 'folder'}
                   id={selectedFilter.split(':')[1]}
                 />
               )}
