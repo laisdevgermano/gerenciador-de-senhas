@@ -24,28 +24,30 @@ datasource db {
 // - sortOrder: ordem de exibição no sidebar (drag-and-drop)
 // -------------------------------------------------------
 model User {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   name         String
-  email        String   @unique
+  email        String    @unique
   avatar       String?
-  role         String   @default("user")
-  status       String   @default("active")
+  role         String    @default("user")
+  status       String    @default("active")
   passphrase   String?
   cargo        String?
   departamento String?
   telefone     String?
-  mfaEnabled   Boolean  @default(false)
+  mfaEnabled   Boolean   @default(false)
   lastLogin    DateTime?
   publicKey    String?
   folderId     String?
-  sortOrder    Int      @default(0)
-  tokenVersion Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  sortOrder    Int       @default(0)
+  tokenVersion Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  folder     Folder?        @relation(fields: [folderId], references: [id])
-  passwords  Password[]     @relation("PasswordCreator")
-  sharedWith SharedAccess[]
+  folder       Folder?        @relation(fields: [folderId], references: [id])
+  passwords    Password[]     @relation("PasswordCreator")
+  sharedWith   SharedAccess[]
+  createdDocs  Document[]     @relation("DocumentCreator")
+  attachedDocs Document[]     @relation("DocumentUser")
 }
 
 // -------------------------------------------------------
@@ -67,6 +69,7 @@ model Folder {
   children  Folder[]   @relation("FolderParent")
   passwords Password[]
   users     User[]
+  documents Document[] @relation("DocumentFolder")
 }
 
 // -------------------------------------------------------
@@ -92,10 +95,10 @@ model Password {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  creator     User           @relation("PasswordCreator", fields: [createdBy], references: [id])
-  folder      Folder?        @relation(fields: [folderId], references: [id])
-  tags        PasswordTag[]
-  sharedWith  SharedAccess[]
+  creator    User           @relation("PasswordCreator", fields: [createdBy], references: [id])
+  folder     Folder?        @relation(fields: [folderId], references: [id])
+  tags       PasswordTag[]
+  sharedWith SharedAccess[]
 }
 
 // -------------------------------------------------------
@@ -109,6 +112,7 @@ model Tag {
   createdAt DateTime @default(now())
 
   passwords PasswordTag[]
+  documents Document[]
 }
 
 // -------------------------------------------------------
@@ -138,4 +142,33 @@ model SharedAccess {
 
   password Password @relation(fields: [passwordId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// -------------------------------------------------------
+// Document — arquivos anexados a pastas, funcionários ou tags
+// -------------------------------------------------------
+// - mimeType: tipo do arquivo (pdf, txt, png, jpg, etc.)
+// - storagePath: caminho relativo em public/uploads/
+// - maxSize: 10MB
+// - folderId: anexado a um cliente (pasta)
+// - userId: anexado a um funcionário
+// - tagId: anexado a uma tag
+// -------------------------------------------------------
+model Document {
+  id          String   @id @default(cuid())
+  name        String
+  fileName    String
+  mimeType    String
+  size        Int
+  storagePath String
+  folderId    String?
+  userId      String?
+  tagId       String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  folder  Folder? @relation("DocumentFolder", fields: [folderId], references: [id], onDelete: Cascade)
+  user    User?   @relation("DocumentUser", fields: [userId], references: [id], onDelete: Cascade)
+  tag     Tag?    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  creator User    @relation("DocumentCreator", fields: [createdBy], references: [id])
 }
