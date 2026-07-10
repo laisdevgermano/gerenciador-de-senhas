@@ -23,7 +23,6 @@ const ALLOWED_TYPES = [
   'image/jpeg',
   'image/gif',
   'image/webp',
-  'image/svg+xml',
   'image/bmp',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -34,7 +33,7 @@ const ALLOWED_TYPES = [
 ]
 const MAX_SIZE = 10 * 1024 * 1024
 
-const ACCEPT_EXT = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.png,.jpg,.jpeg,.gif,.webp,.svg,.bmp'
+const ACCEPT_EXT = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.png,.jpg,.jpeg,.gif,.webp,.bmp'
 
 function getFileIcon(mimeType) {
   if (mimeType === 'application/pdf') return FileText
@@ -108,13 +107,17 @@ export default function DocumentExplorer({ type = 'folder', id, inline = false }
     }
     const formData = new FormData()
     formData.append('file', file)
-    await addDocument(uploadType, uploadId, formData)
+    try {
+      await addDocument(uploadType, uploadId, formData)
+    } catch (err) {
+      alert(err.message || 'Erro ao enviar arquivo')
+    }
   }
 
-  const handleFileSelect = (e) => {
+  const handleFileSelect = async (e) => {
     const file = e.target.files[0]
-    if (file && id) handleUpload(type, id, file)
     e.target.value = ''
+    if (file && id) await handleUpload(type, id, file)
   }
 
   const handleDrop = useCallback((e) => {
