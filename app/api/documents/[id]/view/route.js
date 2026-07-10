@@ -3,6 +3,35 @@ import { getDownloadUrl } from '@vercel/blob'
 import prisma from '@/lib/prisma'
 import { verifyAuth, unauthorized } from '@/lib/auth'
 
+async function checkAccess(document, userId, role) {
+  if (role === 'admin') return true
+  if (document.userId && document.userId === userId) return true
+  if (document.createdBy && document.createdBy === userId) return true
+  if (document.folderId) {
+    const pw = await prisma.password.findFirst({
+      where: { folderId: document.folderId, sharedWith: { some: { userId } } },
+    })
+    if (pw) return true
+  }
+  return false
+}
+
+async function serveBlob(document, disposition) {
+  const blobUrl = getDownloadUrl(document.storagePath)
+  const res = await fetch(blobUrl)
+  if (!res.ok) throw new Error('Blob fetch failed')
+
+  const buffer = await res.arrayBuffer()
+  return new NextResponse(buffer, {
+    headers: {
+      'Content-Type': document.mimeType,
+      'Content-Disposition': `${disposition}; filename="${document.fileName}"`,
+      'Cache-Control': 'private, max-age=3600',
+      'Content-Length': String(buffer.byteLength),
+    },
+  })
+}
+
 export async function GET(request, { params }) {
   const auth = await verifyAuth(request)
   if (!auth) return unauthorized()
@@ -11,21 +40,13 @@ export async function GET(request, { params }) {
     const document = await prisma.document.findUnique({ where: { id } })
     if (!document) return NextResponse.json({ error: 'Documento não encontrado' }, { status: 404 })
 
-    if (auth.role !== 'admin') {
-      let hasAccess = false
-      if (document.folderId) {
-        const pw = await prisma.password.findFirst({
-          where: { folderId: document.folderId, sharedWith: { some: { userId: auth.userId } } },
-        })
-        hasAccess = !!pw
-      }
-      if (document.userId && document.userId === auth.userId) hasAccess = true
-      if (!hasAccess) return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
+    if (!await checkAccess(document, auth.userId, auth.role)) {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
     }
 
-    const url = getDownloadUrl(document.storagePath)
-    return NextResponse.json({ url, mimeType: document.mimeType })
-  } catch {
-    return NextResponse.json({ error: 'Erro ao gerar URL' }, { status: 500 })
+    return await serveBlob(document, 'inline')
+  } catch (e) {
+    console.error('View error:', e?.message)
+    return NextResponse.json({ error: 'Erro ao visualizar' }, { status: 500 })
   }
 }

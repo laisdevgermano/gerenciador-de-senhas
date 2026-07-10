@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import {
   FileText,
   Image,
@@ -53,15 +53,7 @@ function formatFileSize(bytes) {
 }
 
 function ImageThumb({ doc }) {
-  const [src, setSrc] = useState(null)
-  useEffect(() => {
-    fetch(`/api/documents/${doc.id}/view`, { credentials: 'include' })
-      .then((r) => r.json())
-      .then((d) => setSrc(d.url))
-      .catch(() => {})
-  }, [doc.id])
-  if (!src) return <div className="w-full h-20 bg-surface-tertiary rounded mb-2 animate-pulse" />
-  return <img src={src} alt={doc.name} className="w-full h-20 object-cover rounded mb-2" />
+  return <img src={`/api/documents/${doc.id}/view`} alt={doc.name} className="w-full h-20 object-cover rounded mb-2" />
 }
 
 export default function DocumentExplorer({ type = 'folder', id, inline = false }) {
@@ -126,7 +118,7 @@ export default function DocumentExplorer({ type = 'folder', id, inline = false }
 
   const handleDownload = (doc) => {
     const link = document.createElement('a')
-    link.href = doc.storagePath
+    link.href = `/api/documents/${doc.id}/download`
     link.download = doc.fileName
     link.target = '_blank'
     link.rel = 'noopener noreferrer'
@@ -174,14 +166,12 @@ export default function DocumentExplorer({ type = 'folder', id, inline = false }
     setPreviewUrl(null)
     setPreviewLoading(true)
     try {
-      const res = await fetch(`/api/documents/${doc.id}/view`, { credentials: 'include' })
-      if (!res.ok) throw new Error('Falha ao carregar')
-      const data = await res.json()
+      const viewUrl = `/api/documents/${doc.id}/view`
       if (doc.mimeType === 'text/plain' || doc.mimeType === 'text/csv') {
-        const textRes = await fetch(data.url, { credentials: 'include' })
+        const textRes = await fetch(viewUrl, { credentials: 'include' })
         setPreviewContent(await textRes.text())
       } else {
-        setPreviewUrl(data.url)
+        setPreviewUrl(viewUrl)
       }
     } catch {
       setPreviewContent('Erro ao carregar conteúdo.')
