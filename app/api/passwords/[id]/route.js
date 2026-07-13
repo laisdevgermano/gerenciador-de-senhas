@@ -46,9 +46,8 @@ export async function PUT(request, { params }) {
     })
 
     return NextResponse.json(updated)
-  } catch (err) {
-    console.error('[PUT /passwords/[id]]', err)
-    return NextResponse.json({ error: 'Erro ao atualizar senha', detail: err.message }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: 'Erro ao atualizar senha' }, { status: 500 })
   }
 }
 
