@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
-import { RefreshCw, Clock, Copy, Eye, EyeOff, FolderClosed, Tags, AlertTriangle } from 'lucide-react'
+import { RefreshCw, Clock, Copy, Eye, EyeOff, Edit3, FolderClosed, Tags, AlertTriangle } from 'lucide-react'
 import { useStore } from '../context/StoreContext'
 import Badge from '../components/Badge'
 import EmptyState from '../components/EmptyState'
+import PasswordFormModal from './PasswordFormModal'
 
 const PERIOD_OPTIONS = [
   { value: 3, label: '3' },
@@ -13,10 +14,12 @@ const PERIOD_OPTIONS = [
 ]
 
 export default function SubstituirScreen() {
-  const { passwords, getFolderById, getTagById } = useStore()
+  const { passwords, getFolderById, getTagById, updatePassword } = useStore()
   const [days, setDays] = useState(30)
   const [showPasswords, setShowPasswords] = useState({})
   const [copiedId, setCopiedId] = useState(null)
+  const [editingPassword, setEditingPassword] = useState(null)
+  const [error, setError] = useState('')
 
   const stalePasswords = useMemo(() => {
     const cutoff = new Date()
@@ -48,16 +51,40 @@ export default function SubstituirScreen() {
 
   return (
     <div className="p-6 max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950 flex items-center justify-center">
-            <RefreshCw size={20} className="text-amber-500" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-text-primary">Substituir</h2>
-            <p className="text-sm text-text-muted">Senhas que precisam ser atualizadas</p>
-          </div>
+      {error && (
+        <div className="mb-4 p-3 bg-danger/10 border border-danger/30 rounded-lg text-sm text-danger">
+          {error}
+          <button onClick={() => setError('')} className="ml-2 text-danger/70 hover:text-danger cursor-pointer">×</button>
         </div>
+      )}
+
+      {editingPassword ? (
+        <PasswordFormModal
+          asModal={false}
+          password={editingPassword}
+          onClose={() => setEditingPassword(null)}
+          onSave={async (data) => {
+            try {
+              await updatePassword(editingPassword.id, data)
+              setEditingPassword(null)
+              setError('')
+            } catch (err) {
+              setError(err.message || 'Erro ao atualizar senha')
+            }
+          }}
+        />
+      ) : (
+        <>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950 flex items-center justify-center">
+                <RefreshCw size={20} className="text-amber-500" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-text-primary">Substituir</h2>
+                <p className="text-sm text-text-muted">Senhas que precisam ser atualizadas</p>
+              </div>
+            </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-text-muted font-medium">Não modificadas há:</span>
           <div className="flex gap-1 bg-surface-tertiary rounded-lg p-1">
@@ -162,6 +189,13 @@ export default function SubstituirScreen() {
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         <button
+                          onClick={() => setEditingPassword(pw)}
+                          className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-tertiary transition-colors cursor-pointer"
+                          title="Editar senha"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                        <button
                           onClick={() => togglePasswordVisibility(pw.id)}
                           className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-tertiary transition-colors cursor-pointer"
                           title={showPasswords[pw.id] ? 'Ocultar senha' : 'Mostrar senha'}
@@ -187,6 +221,8 @@ export default function SubstituirScreen() {
             </tbody>
           </table>
         </div>
+      )}
+        </>
       )}
     </div>
   )
