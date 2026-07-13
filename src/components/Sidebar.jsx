@@ -194,7 +194,9 @@ export default function Sidebar({
     const isActive = selectedFilter === `folder:${folder.id}`
     return (
       <div key={folder.id}>
-        <div className="flex items-center gap-0">
+        <div className={`flex items-center gap-0 rounded-lg transition-colors ${
+          isActive ? 'bg-surface-active' : 'hover:bg-surface-tertiary'
+        }`}>
           {depth > 0 && (
             <div className="w-[18px] shrink-0" />
           )}
@@ -209,10 +211,10 @@ export default function Sidebar({
           {children.length === 0 && !collapsed && <div className="w-4 shrink-0" />}
           <button
             onClick={() => onSelectFilter?.(`folder:${folder.id}`)}
-            className={`flex items-center gap-3 h-9 px-3 rounded-lg text-sm transition-colors cursor-pointer w-full ${
+            className={`flex items-center gap-3 h-9 px-3 text-sm transition-colors cursor-pointer w-full ${
               isActive
-                ? 'bg-surface-active font-medium'
-                : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
+                ? 'font-medium'
+                : 'text-text-secondary hover:text-text-primary'
             }`}
             title={collapsed ? folder.name : undefined}
             style={{ paddingLeft: collapsed ? undefined : `${12 + depth * 16}px` }}
