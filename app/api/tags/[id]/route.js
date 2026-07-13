@@ -7,11 +7,12 @@ export async function PUT(request, { params }) {
   if (!auth || auth.role !== 'admin') return unauthorized()
   try {
     const { id } = await params
-    const { name, color, sortOrder } = await request.json()
+    const { name, color, sortOrder, parentId } = await request.json()
     const data = {}
     if (name !== undefined) data.name = String(name).slice(0, 50)
     if (color !== undefined) data.color = String(color).slice(0, 7)
     if (sortOrder !== undefined) data.sortOrder = typeof sortOrder === 'number' ? sortOrder : 0
+    if (parentId !== undefined) data.parentId = parentId || null
     const tag = await prisma.tag.update({ where: { id }, data })
     return NextResponse.json(tag)
   } catch {

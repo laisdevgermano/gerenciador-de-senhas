@@ -31,11 +31,12 @@ export async function POST(request) {
   const auth = await verifyAuth(request)
   if (!auth || auth.role !== 'admin') return unauthorized()
   try {
-    const { name, color } = await request.json()
+    const { name, color, parentId } = await request.json()
     const tag = await prisma.tag.create({
       data: {
         name: String(name || 'Nova tag').slice(0, 50),
         color: String(color || '#6366f1').slice(0, 7),
+        parentId: parentId || null,
       },
     })
     return NextResponse.json(tag, { status: 201 })

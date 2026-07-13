@@ -16,7 +16,7 @@ import DocumentExplorer from '../components/DocumentExplorer'
 import { useStore } from '../context/StoreContext'
 
 export default function TagScreen() {
-  const { tags, passwords, addTag, updateTag, deleteTag, currentUser, loadDocuments } = useStore()
+  const { tags, passwords, addTag, updateTag, deleteTag, currentUser, loadDocuments, getRootTags, folders } = useStore()
 
   // Apenas admin pode gerenciar tags
   if (currentUser?.role !== 'admin') {
@@ -29,6 +29,8 @@ export default function TagScreen() {
   const [showModal, setShowModal] = useState(false)
   const [editingTag, setEditingTag] = useState(null)
   const [selectedTagId, setSelectedTagId] = useState(null)
+
+  const rootTags = getRootTags()
 
   const getPasswordCount = (tagId) =>
     passwords.filter((p) => p.tags.includes(tagId)).length
@@ -66,7 +68,7 @@ export default function TagScreen() {
         </Button>
       </div>
 
-      {tags.length === 0 ? (
+      {rootTags.length === 0 ? (
         <EmptyState
           icon={Tags}
           title="Nenhuma tag"
@@ -79,7 +81,7 @@ export default function TagScreen() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {tags.map((tag) => (
+          {rootTags.map((tag) => (
             <div
               key={tag.id}
               onClick={() => handleSelectTag(tag.id)}
@@ -132,6 +134,7 @@ export default function TagScreen() {
       {showModal && (
         <TagFormModal
           tag={editingTag}
+          folders={folders}
           onClose={() => {
             setShowModal(false)
             setEditingTag(null)
@@ -151,9 +154,10 @@ export default function TagScreen() {
   )
 }
 
-function TagFormModal({ tag, onClose, onSave }) {
+function TagFormModal({ tag, folders, onClose, onSave }) {
   const [name, setName] = useState(tag?.name || '')
   const [color, setColor] = useState(tag?.color || '#0c11cf')
+  const [parentId, setParentId] = useState(tag?.parentId || '')
 
   const capitalize = (str) => {
     if (!str) return ''
@@ -163,7 +167,7 @@ function TagFormModal({ tag, onClose, onSave }) {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!name.trim()) return
-    onSave({ name: capitalize(name.trim()), color })
+    onSave({ name: capitalize(name.trim()), color, parentId: parentId || null })
   }
 
   return (
@@ -205,6 +209,24 @@ function TagFormModal({ tag, onClose, onSave }) {
               )
             )}
           </div>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-text-primary block mb-1.5">
+            Cliente pai (opcional)
+          </label>
+          <select
+            value={parentId}
+            onChange={(e) => setParentId(e.target.value)}
+            className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand/40"
+          >
+            <option value="">Nenhuma (raiz)</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {tag && (

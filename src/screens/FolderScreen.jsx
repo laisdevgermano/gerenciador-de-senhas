@@ -17,6 +17,7 @@ import {
   ChevronRight,
   ChevronDown,
   GripVertical,
+  Tags,
 } from 'lucide-react'
 import Button from '../components/Button'
 import Modal from '../components/Modal'
@@ -26,12 +27,15 @@ import DocumentExplorer from '../components/DocumentExplorer'
 import { useStore } from '../context/StoreContext'
 
 export default function FolderScreen() {
-  const { folders, getChildrenFolders, addFolder, updateFolder, deleteFolder, getPasswordsByFolder, reorderFolders, currentUser, loadDocuments } = useStore()
+  const { folders, getChildrenFolders, addFolder, updateFolder, deleteFolder, getPasswordsByFolder, reorderFolders, currentUser, loadDocuments, tags, getTagsByFolder, addTag, deleteTag, updateTag } = useStore()
 
   const [showModal, setShowModal] = useState(false)
   const [editingFolder, setEditingFolder] = useState(null)
   const [expanded, setExpanded] = useState({})
   const [selectedFolderId, setSelectedFolderId] = useState(null)
+  const [showTagModal, setShowTagModal] = useState(false)
+  const [editingTag, setEditingTag] = useState(null)
+  const [tagParentFolderId, setTagParentFolderId] = useState(null)
 
   const toggleExpand = (id) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -115,6 +119,22 @@ export default function FolderScreen() {
             onReorder={handleReorder}
             onSelect={handleSelectFolder}
             selectedFolderId={selectedFolderId}
+            getTagsByFolder={getTagsByFolder}
+            onAddTag={(folderId) => {
+              setTagParentFolderId(folderId)
+              setEditingTag(null)
+              setShowTagModal(true)
+            }}
+            onEditTag={(tag) => {
+              setEditingTag(tag)
+              setTagParentFolderId(tag.parentId)
+              setShowTagModal(true)
+            }}
+            onDeleteTag={async (tag) => {
+              if (confirm(`Excluir tag "${tag.name}"?`)) {
+                await deleteTag(tag.id)
+              }
+            }}
           />
         </div>
       )}
@@ -144,11 +164,34 @@ export default function FolderScreen() {
           }}
         />
       )}
+
+      {showTagModal && (
+        <TagFormModal
+          tag={editingTag}
+          defaultParentId={tagParentFolderId}
+          folders={folders}
+          onClose={() => {
+            setShowTagModal(false)
+            setEditingTag(null)
+            setTagParentFolderId(null)
+          }}
+          onSave={async (data) => {
+            if (editingTag) {
+              await updateTag(editingTag.id, data)
+            } else {
+              await addTag(data)
+            }
+            setShowTagModal(false)
+            setEditingTag(null)
+            setTagParentFolderId(null)
+          }}
+        />
+      )}
     </div>
   )
 }
 
-function FolderTree({ folders, expanded, onToggle, onEdit, onDelete, getChildren, onReorder, onSelect, selectedFolderId, depth = 0 }) {
+function FolderTree({ folders, expanded, onToggle, onEdit, onDelete, getChildren, onReorder, onSelect, selectedFolderId, getTagsByFolder, onAddTag, onEditTag, onDeleteTag, depth = 0 }) {
   const [dragIndex, setDragIndex] = useState(null)
   const [dragOverIndex, setDragOverIndex] = useState(null)
   const dragNode = useRef(null)
@@ -208,7 +251,8 @@ function FolderTree({ folders, expanded, onToggle, onEdit, onDelete, getChildren
     <>
       {folders.map((folder, idx) => {
         const children = getChildren(folder.id)
-        const hasChildren = children.length > 0
+        const folderTags = getTagsByFolder(folder.id)
+        const hasContent = children.length > 0 || folderTags.length > 0
         const isExpanded = expanded[folder.id]
         const isDragOver = dragOverIndex === idx && dragIndex !== idx
 
@@ -232,9 +276,9 @@ function FolderTree({ folders, expanded, onToggle, onEdit, onDelete, getChildren
               </div>
 
               <button
-                onClick={() => hasChildren && onToggle(folder.id)}
+                onClick={() => hasContent && onToggle(folder.id)}
                 className={`p-0.5 rounded text-text-muted hover:text-text-primary transition-colors cursor-pointer ${
-                  !hasChildren ? 'invisible' : ''
+                  !hasContent ? 'invisible' : ''
                 }`}
               >
                 {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -255,6 +299,13 @@ function FolderTree({ folders, expanded, onToggle, onEdit, onDelete, getChildren
 
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
+                  onClick={(e) => { e.stopPropagation(); onAddTag?.(folder.id) }}
+                  className="p-1.5 rounded-lg text-text-muted hover:text-brand hover:bg-brand-light transition-colors cursor-pointer"
+                  title="Adicionar tag"
+                >
+                  <Plus size={14} />
+                </button>
+                <button
                   onClick={() => onEdit(folder)}
                   className="p-1.5 rounded-lg text-text-muted hover:text-brand hover:bg-brand-light transition-colors cursor-pointer"
                 >
@@ -269,7 +320,7 @@ function FolderTree({ folders, expanded, onToggle, onEdit, onDelete, getChildren
               </div>
             </div>
 
-            {hasChildren && isExpanded && (
+            {children.length > 0 && isExpanded && (
               <FolderTree
                 folders={children}
                 expanded={expanded}
@@ -280,8 +331,45 @@ function FolderTree({ folders, expanded, onToggle, onEdit, onDelete, getChildren
                 onReorder={onReorder}
                 onSelect={onSelect}
                 selectedFolderId={selectedFolderId}
+                getTagsByFolder={getTagsByFolder}
+                onAddTag={onAddTag}
+                onEditTag={onEditTag}
+                onDeleteTag={onDeleteTag}
                 depth={depth + 1}
               />
+            )}
+
+            {isExpanded && folderTags.length > 0 && (
+              <div>
+                {folderTags.map((tag) => (
+                    <div
+                      key={tag.id}
+                      className="flex items-center gap-2 px-4 py-2 hover:bg-surface-tertiary transition-colors border-b border-border/50 last:border-b-0 group"
+                      style={{ paddingLeft: 16 + (depth + 1) * 24 }}
+                    >
+                      <div className="w-[14px] shrink-0" />
+                      <div className="w-4 shrink-0" />
+                      <Tags size={16} className="shrink-0" style={{ color: tag.color || '#94a3b8' }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-text-secondary truncate">{tag.name}</p>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => onEditTag?.(tag)}
+                          className="p-1.5 rounded-lg text-text-muted hover:text-brand hover:bg-brand-light transition-colors cursor-pointer"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                        <button
+                          onClick={() => onDeleteTag?.(tag)}
+                          className="p-1.5 rounded-lg text-text-muted hover:text-danger hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors cursor-pointer"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                ))}
+              </div>
             )}
           </div>
         )
@@ -359,6 +447,85 @@ function FolderFormModal({ folder, folders, onClose, onSave }) {
                   {f.name}
                 </option>
               ))}
+          </select>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+function TagFormModal({ tag, defaultParentId, folders, onClose, onSave }) {
+  const [name, setName] = useState(tag?.name || '')
+  const [color, setColor] = useState(tag?.color || '#0c11cf')
+  const [parentId, setParentId] = useState(tag?.parentId || defaultParentId || '')
+
+  const capitalize = (str) => {
+    if (!str) return ''
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (!name.trim()) return
+    onSave({ name: capitalize(name.trim()), color, parentId: parentId || null })
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={tag ? 'Editar tag' : 'Nova tag'}
+      size="sm"
+      disableOverlayClose
+      actions={
+        <>
+          <Button variant="danger" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleSubmit}>{tag ? 'Salvar' : 'Criar'}</Button>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="Nome da tag"
+          placeholder="Ex: DevOps"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+
+        <div>
+          <label className="text-sm font-medium text-text-primary block mb-1.5">Cor</label>
+          <div className="flex gap-2">
+            {['#0c11cf', '#7c3aed', '#059669', '#d97706', '#dc2626', '#e11d48', '#6366f1', '#0891b2'].map(
+              (c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className={`w-8 h-8 rounded-lg border-2 transition-all cursor-pointer ${
+                    color === c ? 'border-text-primary scale-110' : 'border-transparent'
+                  }`}
+                  style={{ backgroundColor: c }}
+                />
+              )
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-text-primary block mb-1.5">
+            Cliente pai (opcional)
+          </label>
+          <select
+            value={parentId}
+            onChange={(e) => setParentId(e.target.value)}
+            className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand/40"
+          >
+            <option value="">Nenhuma (raiz)</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
           </select>
         </div>
       </form>

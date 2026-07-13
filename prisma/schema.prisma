@@ -69,6 +69,7 @@ model Folder {
   children  Folder[]   @relation("FolderParent")
   passwords Password[]
   users     User[]
+  tags      Tag[]      @relation("TagParent")
   documents Document[] @relation("DocumentFolder")
 }
 
@@ -108,9 +109,11 @@ model Tag {
   id        String   @id @default(cuid())
   name      String   @unique
   color     String?  @default("#0c11cf")
+  parentId  String?
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 
+  parent   Folder?        @relation("TagParent", fields: [parentId], references: [id])
   passwords PasswordTag[]
   documents Document[]
 }

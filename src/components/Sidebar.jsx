@@ -96,7 +96,7 @@ export default function Sidebar({
         items = foldersFilter.open ? filteredSorted(rootFolders, 'folders') : [...rootFolders]
         break
       case 'tags':
-        items = tagsFilter.open ? filteredSorted(tags, 'tags') : [...tags]
+        items = tagsFilter.open ? filteredSorted(rootTags, 'tags') : [...rootTags]
         break
       case 'employees':
         items = employeesFilter.open ? filteredSorted(employees, 'employees') : [...employees]
@@ -178,6 +178,7 @@ export default function Sidebar({
   ]
 
   const rootFolders = folders.filter((f) => !f.parentId)
+  const rootTags = tags.filter((t) => !t.parentId)
 
   const getChildren = (parentId) => folders.filter((f) => f.parentId === parentId)
 
@@ -192,6 +193,8 @@ export default function Sidebar({
 
   const renderFolder = (folder, depth = 0) => {
     const children = getChildren(folder.id)
+    const folderTags = tags.filter((t) => t.parentId === folder.id)
+    const hasChildrenOrTags = children.length > 0 || folderTags.length > 0
     const isExpanded = expandedFolders.has(folder.id)
     const isActive = selectedFilter === `folder:${folder.id}`
     return (
@@ -202,7 +205,7 @@ export default function Sidebar({
           {depth > 0 && (
             <div className="w-[18px] shrink-0" />
           )}
-          {children.length > 0 && !collapsed && (
+          {hasChildrenOrTags && !collapsed && (
             <button
               onClick={() => toggleExpand(folder.id)}
               className="p-0.5 text-text-muted hover:text-text-primary cursor-pointer shrink-0"
@@ -210,7 +213,7 @@ export default function Sidebar({
               {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             </button>
           )}
-          {children.length === 0 && !collapsed && <div className="w-4 shrink-0" />}
+          {(!hasChildrenOrTags || collapsed) && !collapsed && <div className="w-4 shrink-0" />}
           <button
             onClick={() => onSelectFilter?.(`folder:${folder.id}`)}
             className={`flex items-center gap-3 h-9 px-3 text-sm transition-colors cursor-pointer w-full ${
@@ -225,9 +228,24 @@ export default function Sidebar({
             {!collapsed && <span className="truncate">{folder.name}</span>}
           </button>
         </div>
-        {isExpanded && children.length > 0 && (
+        {isExpanded && (
           <div>
             {children.map((child) => renderFolder(child, depth + 1))}
+            {!collapsed && folderTags.map((tag) => (
+              <button
+                key={tag.id}
+                onClick={() => onSelectFilter?.(`tag:${tag.id}`)}
+                className={`flex items-center gap-3 h-8 px-3 text-sm transition-colors cursor-pointer w-full rounded-lg ${
+                  selectedFilter === `tag:${tag.id}`
+                    ? 'bg-surface-active font-medium'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-surface-tertiary'
+                }`}
+                style={{ paddingLeft: `${12 + (depth + 1) * 16}px` }}
+              >
+                <Tags size={14} className="shrink-0" style={{ color: tag.color || undefined }} />
+                <span className="truncate">{tag.name}</span>
+              </button>
+            ))}
           </div>
         )}
       </div>
@@ -530,7 +548,7 @@ export default function Sidebar({
           </>
         )}
 
-        {tags.length > 0 && (
+        {rootTags.length > 0 && (
           <>
             {collapsed ? (
               isAdmin && (
@@ -627,7 +645,7 @@ export default function Sidebar({
                     </div>
                   </div>
                 )}
-                {tagsExpanded && filteredSorted(tags, 'tags').map((tag, idx) => {
+                {tagsExpanded && filteredSorted(rootTags, 'tags').map((tag, idx) => {
                   const isActive = selectedFilter === `tag:${tag.id}`
                   const isDragOver = dragOverIndex === idx && dragIndex !== idx && dragSection === 'tags'
                   return (

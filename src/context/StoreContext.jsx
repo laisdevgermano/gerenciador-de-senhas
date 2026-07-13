@@ -422,6 +422,14 @@ export function StoreProvider({ children, currentUser }) {
     (id) => tags.find((t) => t.id === id),
     [tags]
   )
+  const getTagsByFolder = useCallback(
+    (folderId) => tags.filter((t) => t.parentId === folderId),
+    [tags]
+  )
+  const getRootTags = useCallback(
+    () => tags.filter((t) => !t.parentId),
+    [tags]
+  )
   const getEmployeeAccess = useCallback(
     (employeeId) => {
       return passwords.filter((p) =>
@@ -446,7 +454,7 @@ export function StoreProvider({ children, currentUser }) {
     updateUser,
     getPasswordById, getPasswordsByFolder, getPasswordsByTag,
     getFolderById, getFolderByName, getChildrenFolders,
-    getUserById, getTagById,
+    getUserById, getTagById, getTagsByFolder, getRootTags,
   }
 
   return (
