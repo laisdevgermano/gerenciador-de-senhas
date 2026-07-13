@@ -173,9 +173,6 @@ export default function Sidebar({
 
   const mainItems = [
     { key: 'all', label: 'Todas as senhas', icon: Lock },
-    ...(isAdmin
-      ? [{ key: 'employees', label: 'Funcionários', icon: Users }]
-      : []),
   ]
 
   const rootFolders = folders.filter((f) => !f.parentId)
@@ -276,113 +273,129 @@ export default function Sidebar({
           )
         })}
 
-        {isAdmin && employees.length > 0 && !collapsed && (
+        {isAdmin && employees.length > 0 && (
           <>
-            <div className="flex items-center gap-0 mt-4 group">
-              <button
-                onClick={() => setEmployeesExpanded((prev) => !prev)}
-                className="p-1 text-text-muted hover:text-text-primary cursor-pointer shrink-0"
-              >
-                {employeesExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-              </button>
+            {collapsed ? (
               <button
                 onClick={() => onSelectFilter?.('employees')}
-                className={`flex items-center gap-3 h-9 px-3 rounded-lg text-sm transition-colors cursor-pointer w-full ${
+                className={`w-full flex items-center justify-center h-9 rounded-lg transition-colors cursor-pointer ${
                   selectedFilter === 'employees'
-                    ? 'bg-surface-active font-medium'
+                    ? 'bg-surface-active'
                     : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
                 }`}
+                title="Funcionários"
               >
-                <Users size={18} className={`shrink-0 ${selectedFilter === 'employees' ? 'text-brand' : ''}`} />
-                <span className="truncate font-semibold text-xs uppercase tracking-wider text-text-muted">
-                  Funcionários ({employees.length})
-                </span>
+                <Users size={18} className="shrink-0" />
               </button>
-              <button
-                onClick={() => toggleFilter('employees')}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
-                  employeesFilter.open
-                    ? 'text-brand bg-brand-light'
-                    : 'text-text-muted hover:text-text-primary hover:bg-surface-tertiary opacity-0 group-hover:opacity-100'
-                }`}
-                    >
-                      <Filter size={14} />
-                    </button>
-            </div>
-            {employeesFilter.open && (
-              <div className="px-2 mt-1 mb-1 space-y-1">
-                <div className="relative">
-                  <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
-                  <input
-                    type="text"
-                    placeholder="Pesquisar..."
-                    value={employeesFilter.query}
-                    onChange={(e) => setEmployeesFilter((prev) => ({ ...prev, query: e.target.value }))}
-                    className="h-7 w-full rounded-md border border-border bg-surface pl-7 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-brand/40"
-                  />
-                </div>
-                <div className="flex gap-1">
+            ) : (
+              <>
+                <div className="flex items-center gap-0 mt-4 group">
                   <button
-                    onClick={() => setSortOrder('employees', 'asc')}
-                    className={`flex-1 h-6 rounded text-xs font-medium transition-colors cursor-pointer ${
-                      employeesFilter.order === 'asc'
-                        ? 'bg-brand text-white'
-                        : 'bg-surface-tertiary text-text-secondary hover:bg-surface-active'
-                    }`}
+                    onClick={() => setEmployeesExpanded((prev) => !prev)}
+                    className="p-1 text-text-muted hover:text-text-primary cursor-pointer shrink-0"
                   >
-                    A-Z
+                    {employeesExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                   </button>
                   <button
-                    onClick={() => setSortOrder('employees', 'desc')}
-                    className={`flex-1 h-6 rounded text-xs font-medium transition-colors cursor-pointer ${
-                      employeesFilter.order === 'desc'
-                        ? 'bg-brand text-white'
-                        : 'bg-surface-tertiary text-text-secondary hover:bg-surface-active'
+                    onClick={() => onSelectFilter?.('employees')}
+                    className={`flex items-center gap-3 h-9 px-3 rounded-lg text-sm transition-colors cursor-pointer w-full ${
+                      selectedFilter === 'employees'
+                        ? 'bg-surface-active font-medium'
+                        : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
                     }`}
                   >
-                    Z-A
-                  </button>
-                </div>
-              </div>
-            )}
-            {employeesExpanded && filteredSorted(employees, 'employees').map((emp, idx) => {
-              const isActive = selectedFilter === `employee:${emp.id}`
-              const isDragOver = dragOverIndex === idx && dragIndex !== idx && dragSection === 'employees'
-              return (
-                <div
-                  key={emp.id}
-                  onDragOver={(e) => handleDragOver(e, 'employees', idx)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, 'employees', idx)}
-                  onDragEnd={handleDragEnd}
-                  className={`group ${isDragOver ? 'border-t-2 border-t-brand' : ''}`}
-                >
-                  <div className="flex items-center gap-0">
-                    <span
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, 'employees', idx)}
-                      onDragEnd={handleDragEnd}
-                      className="px-1 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0"
-                    >
-                      <GripVertical size={12} />
+                    <Users size={18} className={`shrink-0 ${selectedFilter === 'employees' ? 'text-brand' : ''}`} />
+                    <span className="truncate font-semibold text-xs uppercase tracking-wider text-text-muted">
+                      Funcionários ({employees.length})
                     </span>
-                    <button
-                      onClick={() => onSelectFilter?.(`employee:${emp.id}`)}
-                      className={`flex items-center gap-3 h-8 px-3 rounded-lg text-sm transition-colors cursor-pointer w-full ${
-                        isActive
-                          ? 'bg-surface-active font-medium'
-                          : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
-                      }`}
-                      title={emp.name}
-                      style={{ paddingLeft: '36px' }}
-                    >
-                      <User size={14} className={`shrink-0 ${isActive ? 'text-brand' : ''}`} />
-                      <span className="truncate">{emp.name}</span>
-                    </button>
-                  </div>
+                  </button>
+                  <button
+                    onClick={() => toggleFilter('employees')}
+                    className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                      employeesFilter.open
+                        ? 'text-brand bg-brand-light'
+                        : 'text-text-muted hover:text-text-primary hover:bg-surface-tertiary opacity-0 group-hover:opacity-100'
+                    }`}
+                  >
+                    <Filter size={14} />
+                  </button>
                 </div>
-              )
-            })}
+                {employeesFilter.open && (
+                  <div className="px-2 mt-1 mb-1 space-y-1">
+                    <div className="relative">
+                      <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                      <input
+                        type="text"
+                        placeholder="Pesquisar..."
+                        value={employeesFilter.query}
+                        onChange={(e) => setEmployeesFilter((prev) => ({ ...prev, query: e.target.value }))}
+                        className="h-7 w-full rounded-md border border-border bg-surface pl-7 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-brand/40"
+                      />
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setSortOrder('employees', 'asc')}
+                        className={`flex-1 h-6 rounded text-xs font-medium transition-colors cursor-pointer ${
+                          employeesFilter.order === 'asc'
+                            ? 'bg-brand text-white'
+                            : 'bg-surface-tertiary text-text-secondary hover:bg-surface-active'
+                        }`}
+                      >
+                        A-Z
+                      </button>
+                      <button
+                        onClick={() => setSortOrder('employees', 'desc')}
+                        className={`flex-1 h-6 rounded text-xs font-medium transition-colors cursor-pointer ${
+                          employeesFilter.order === 'desc'
+                            ? 'bg-brand text-white'
+                            : 'bg-surface-tertiary text-text-secondary hover:bg-surface-active'
+                        }`}
+                      >
+                        Z-A
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {employeesExpanded && filteredSorted(employees, 'employees').map((emp, idx) => {
+                  const isActive = selectedFilter === `employee:${emp.id}`
+                  const isDragOver = dragOverIndex === idx && dragIndex !== idx && dragSection === 'employees'
+                  return (
+                    <div
+                      key={emp.id}
+                      onDragOver={(e) => handleDragOver(e, 'employees', idx)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, 'employees', idx)}
+                      onDragEnd={handleDragEnd}
+                      className={`group ${isDragOver ? 'border-t-2 border-t-brand' : ''}`}
+                    >
+                      <div className="flex items-center gap-0">
+                        <span
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, 'employees', idx)}
+                          onDragEnd={handleDragEnd}
+                          className="px-1 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0"
+                        >
+                          <GripVertical size={12} />
+                        </span>
+                        <button
+                          onClick={() => onSelectFilter?.(`employee:${emp.id}`)}
+                          className={`flex items-center gap-3 h-8 px-3 rounded-lg text-sm transition-colors cursor-pointer w-full ${
+                            isActive
+                              ? 'bg-surface-active font-medium'
+                              : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
+                          }`}
+                          title={emp.name}
+                          style={{ paddingLeft: '36px' }}
+                        >
+                          <User size={14} className={`shrink-0 ${isActive ? 'text-brand' : ''}`} />
+                          <span className="truncate">{emp.name}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
+            )}
           </>
         )}
 
