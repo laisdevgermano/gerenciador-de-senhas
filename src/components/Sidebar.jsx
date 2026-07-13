@@ -29,6 +29,7 @@ import {
   GripVertical,
   Filter,
   Search,
+  RefreshCw,
 } from 'lucide-react'
 import Badge from './Badge'
 import Avatar from './Avatar'
@@ -173,6 +174,7 @@ export default function Sidebar({
 
   const mainItems = [
     { key: 'all', label: 'Todas as senhas', icon: Lock },
+    { key: 'substituir', label: 'Substituir', icon: RefreshCw },
   ]
 
   const rootFolders = folders.filter((f) => !f.parentId)

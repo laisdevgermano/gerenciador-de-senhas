@@ -45,6 +45,7 @@ import SettingsScreen from './SettingsScreen'
 import EmployeeScreen from './EmployeeScreen'
 import FolderScreen from './FolderScreen'
 import TagScreen from './TagScreen'
+import SubstituirScreen from './SubstituirScreen'
 import Modal from '../components/Modal'
 import DocumentExplorer from '../components/DocumentExplorer'
 
@@ -466,6 +467,31 @@ export default function DashboardScreen({ onLogout }) {
         />
         <main className="flex-1 overflow-y-auto">
           <TagScreen />
+        </main>
+      </div>
+    )
+  }
+
+  if (selectedFilter === 'substituir') {
+    return (
+      <div className="flex h-screen">
+        <Sidebar
+          folders={visibleFolders}
+          tags={visibleTags}
+          employees={employees}
+          selectedFilter={selectedFilter}
+          onSelectFilter={setSelectedFilter}
+          onNewPassword={handleNewPassword}
+          onLogout={onLogout}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          currentUser={currentUser}
+          onReorderFolders={reorderFolders}
+          onReorderTags={reorderTags}
+          onReorderEmployees={reorderEmployees}
+        />
+        <main className="flex-1 overflow-y-auto">
+          <SubstituirScreen />
         </main>
       </div>
     )
