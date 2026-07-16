@@ -85,9 +85,14 @@ function ProfileSettings({ user }) {
   const [passError, setPassError] = useState('')
   const [savingPass, setSavingPass] = useState(false)
 
-  const handleSave = () => {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  const handleSave = async () => {
+    try {
+      await updateUser(user.id, { name })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch {
+      // erro silencioso
+    }
   }
 
   const handleChangePassphrase = async () => {
