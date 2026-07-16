@@ -44,14 +44,22 @@ export async function POST(request) {
       createdBy: auth.userId,
     }
 
+    const finalSharedWith = sharedWith?.length
+      ? sharedWith.map((sa) => ({ userId: String(sa.userId || sa), permission: sa.permission || 'read' }))
+      : []
+
+    if (auth.role !== 'admin' && !finalSharedWith.some((sa) => sa.userId === auth.userId)) {
+      finalSharedWith.push({ userId: auth.userId, permission: 'write' })
+    }
+
     const created = await prisma.password.create({
       data: {
         ...pwData,
         tags: tags?.length
           ? { create: tags.map((tagId) => ({ tagId: String(tagId) })) }
           : undefined,
-        sharedWith: sharedWith?.length
-          ? { create: sharedWith.map((sa) => ({ userId: String(sa.userId || sa), permission: sa.permission || 'read' })) }
+        sharedWith: finalSharedWith.length
+          ? { create: finalSharedWith }
           : undefined,
       },
       include: {
@@ -61,7 +69,7 @@ export async function POST(request) {
       },
     })
 
-    return NextResponse.json(password, { status: 201 })
+    return NextResponse.json(created, { status: 201 })
   } catch {
     return NextResponse.json({ error: 'Erro ao criar senha' }, { status: 500 })
   }
